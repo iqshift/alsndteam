@@ -1,0 +1,45 @@
+# Node modules
+**/node_modules/
+**/dist/
+**/.env
+**/.env.*
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+
+# Flutter / Dart
+**/.dart_tool/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/pubspec.lock
+**/*.shared
+**/*.pyc
+
+# IDEs
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary test scripts in backend
+/backend/list_admins.ts
+/backend/reset_admin_pw.ts
+/backend/test_cancel_sub.ts
+/backend/activate_restaurant.ts
+/backend/set_suspended_subscription.ts
+/backend/check_order_541420.ts
+/backend/check_settings.ts
+/backend/update_global_commission.ts
+/backend/update_order_commission.ts
+
+# Windows
+Thumbs.db
+Ehthumbs.db
+Desktop.ini

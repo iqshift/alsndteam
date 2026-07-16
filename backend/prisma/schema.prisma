@@ -1,0 +1,259 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ Admin ============
+model Admin {
+  id           String   @id @default(uuid())
+  name         String   @db.VarChar(150)
+  phone        String   @unique @db.VarChar(20)
+  passwordHash String   @map("password_hash")
+  role         String   @default("admin") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  auditLogs AuditLog[]
+
+  @@map("admins")
+}
+
+// ============ Admin Settings ============
+model AdminSettings {
+  id        String   @id
+  settings  Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_settings")
+}
+
+// ============ Zones ============
+model Zone {
+  id              String   @id @default(uuid())
+  name            String   @db.VarChar(100)
+  deliveryPrice   Decimal  @map("delivery_price") @db.Decimal(10, 2)
+  driverDeduction Decimal  @map("driver_deduction") @db.Decimal(10, 2)
+  boundary        Json?     // GeoJSON Polygon coordinates
+  isActive        Boolean  @default(true) @map("is_active")
+  isGroup         Boolean  @default(false) @map("is_group")
+  parentId        String?  @map("parent_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  parent          Zone?    @relation("SubZones", fields: [parentId], references: [id], onDelete: Cascade)
+  subZones        Zone[]   @relation("SubZones")
+
+  orders              Order[]
+  restaurantZoneUsage RestaurantZoneUsage[]
+
+  @@map("zones")
+}
+
+// ============ Restaurants ============
+model Restaurant {
+  id           String   @id @default(uuid())
+  name         String   @db.VarChar(150)
+  phone        String   @unique @db.VarChar(20)
+  lat          Decimal  @db.Decimal(10, 7)
+  lng          Decimal  @db.Decimal(10, 7)
+  passwordHash String   @map("password_hash") @db.Text
+  status       String   @default("active") @db.VarChar(20)
+  imageUrl     String?  @map("image_url") @db.Text
+  billingMode  String   @default("commission") @map("billing_mode") @db.VarChar(20)
+  subscriptionExpiresAt DateTime? @map("subscription_expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  orders              Order[]
+  restaurantZoneUsage RestaurantZoneUsage[]
+
+  @@map("restaurants")
+}
+
+model RestaurantZoneUsage {
+  restaurantId String   @map("restaurant_id")
+  zoneId       String   @map("zone_id")
+  usageCount   Int      @default(1) @map("usage_count")
+  lastUsedAt   DateTime @default(now()) @map("last_used_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  zone       Zone       @relation(fields: [zoneId], references: [id])
+
+  @@id([restaurantId, zoneId])
+  @@map("restaurant_zone_usage")
+}
+
+// ============ Drivers ============
+model Driver {
+  id                 String    @id @default(uuid())
+  name               String    @db.VarChar(150)
+  phone              String    @unique @db.VarChar(20)
+  passwordHash       String    @map("password_hash") @db.Text
+  lat                Decimal?  @db.Decimal(10, 7)
+  lng                Decimal?  @db.Decimal(10, 7)
+  locationUpdatedAt  DateTime? @map("location_updated_at")
+  availabilityStatus String    @default("offline") @map("availability_status") @db.VarChar(20)
+  walletBalance      Decimal   @default(0) @map("wallet_balance") @db.Decimal(12, 2)
+  status             String    @default("active") @db.VarChar(20)
+  photo              String?   @db.Text
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  orders             Order[]
+  orderBroadcasts    OrderBroadcast[]
+  walletTransactions WalletTransaction[]
+  supportMessages    SupportMessage[]
+
+  @@index([availabilityStatus])
+  @@map("drivers")
+}
+
+// ============ Orders ============
+model Order {
+  id                  String    @id @default(uuid())
+  orderNumber         Int?      @map("order_number")
+  restaurantId        String    @map("restaurant_id")
+  driverId            String?   @map("driver_id")
+  customerPhone       String    @map("customer_phone") @db.VarChar(20)
+  customerAddress     String    @map("customer_address") @db.Text
+  nearestLandmark     String?   @map("nearest_landmark") @db.Text
+  orderValue          Decimal   @map("order_value") @db.Decimal(12, 2)
+  zoneId              String    @map("zone_id")
+  deliveryPrice       Decimal   @map("delivery_price") @db.Decimal(10, 2)
+  driverDeduction     Decimal   @map("driver_deduction") @db.Decimal(10, 2)
+  restaurantCommission Decimal   @default(0) @map("restaurant_commission") @db.Decimal(10, 2)
+  status              String    @default("searching_driver") @db.VarChar(30)
+  assignedManually    Boolean   @default(false) @map("assigned_manually")
+  assignedByAdminId   String?   @map("assigned_by_admin_id")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  assignedAt          DateTime? @map("assigned_at")
+  arrivedRestaurantAt DateTime? @map("arrived_restaurant_at")
+  pickedUpAt          DateTime? @map("picked_up_at")
+  deliveredAt         DateTime? @map("delivered_at")
+  cancelledAt         DateTime? @map("cancelled_at")
+
+  restaurant        Restaurant        @relation(fields: [restaurantId], references: [id])
+  driver            Driver?           @relation(fields: [driverId], references: [id])
+  zone              Zone              @relation(fields: [zoneId], references: [id])
+  broadcasts        OrderBroadcast[]
+  walletTransactions WalletTransaction[]
+
+  @@index([restaurantId, createdAt(sort: Desc)])
+  @@index([driverId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("orders")
+}
+
+// ============ Support Messages ============
+model SupportMessage {
+  id         String   @id @default(uuid())
+  driverId   String   @map("driver_id")
+  sender     String   // "driver" or "admin"
+  content    String   @db.Text
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  driver     Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@map("support_messages")
+}
+
+// ============ Order Broadcasts ============
+model OrderBroadcast {
+  id          String    @id @default(uuid())
+  orderId     String    @map("order_id")
+  driverId    String    @map("driver_id")
+  tier        Int       @default(1)
+  response    String?   @db.VarChar(20)
+  broadcastAt DateTime  @default(now()) @map("broadcast_at")
+  respondedAt DateTime? @map("responded_at")
+
+  order  Order  @relation(fields: [orderId], references: [id])
+  driver Driver @relation(fields: [driverId], references: [id])
+
+  @@index([orderId])
+  @@map("order_broadcasts")
+}
+
+// ============ Wallet Transactions ============
+model WalletTransaction {
+  id             String    @id @default(uuid())
+  driverId       String    @map("driver_id")
+  type           String    @db.VarChar(20)
+  amount         Decimal   @db.Decimal(12, 2)
+  orderId        String?   @map("order_id")
+  rechargeCodeId String?   @map("recharge_code_id")
+  balanceAfter   Decimal   @map("balance_after") @db.Decimal(12, 2)
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  driver       Driver        @relation(fields: [driverId], references: [id])
+  order        Order?        @relation(fields: [orderId], references: [id])
+  rechargeCode RechargeCode? @relation(fields: [rechargeCodeId], references: [id])
+
+  @@index([driverId, createdAt(sort: Desc)])
+  @@map("wallet_transactions")
+}
+
+// ============ Employees (POS) ============
+model Employee {
+  id           String   @id @default(uuid())
+  name         String   @db.VarChar(150)
+  phone        String   @unique @db.VarChar(20)
+  passwordHash String   @map("password_hash") @db.Text
+  status       String   @default("active") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  rechargeCodes RechargeCode[]
+
+  @@map("employees")
+}
+
+// ============ Recharge Codes ============
+model RechargeCode {
+  id                  String    @id @default(uuid())
+  code                String    @unique @db.VarChar(30)
+  value               Decimal   @db.Decimal(12, 2)
+  isUsed              Boolean   @default(false) @map("is_used")
+  usedByDriverId      String?   @map("used_by_driver_id")
+  usedAt              DateTime? @map("used_at")
+  createdByEmployeeId String?   @map("created_by_employee_id")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  createdByEmployee Employee?          @relation(fields: [createdByEmployeeId], references: [id])
+  walletTransactions WalletTransaction[]
+
+  @@index([createdByEmployeeId])
+  @@map("recharge_codes")
+}
+
+// ============ Audit Logs ============
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorType  String   @map("actor_type") @db.VarChar(20)
+  actorId    String?  @map("actor_id")
+  action     String   @db.VarChar(100)
+  entityType String?  @map("entity_type") @db.VarChar(50)
+  entityId   String?  @map("entity_id")
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  admin Admin? @relation(fields: [actorId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// ============ Refresh Tokens ============
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique @db.Text
+  userId    String   @map("user_id")
+  userType  String   @map("user_type") @db.VarChar(20)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("refresh_tokens")
+}
