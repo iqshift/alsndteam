@@ -197,6 +197,9 @@ export default function ZonesPage() {
       day: 'numeric'
     });
 
+    const largeGroups = printableGroups.filter(g => g.items.length >= 8);
+    const smallGroups = printableGroups.filter(g => g.items.length < 8);
+
     // توليد كود HTML للتصميم الأنيق
     const htmlContent = `
       <!DOCTYPE html>
@@ -209,7 +212,7 @@ export default function ZonesPage() {
           
           @page {
             size: A4;
-            margin: 15mm;
+            margin: 12mm 15mm;
           }
           
           body {
@@ -227,8 +230,8 @@ export default function ZonesPage() {
             justify-content: space-between;
             align-items: center;
             border-bottom: 3px solid #d12363;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
           }
           
           .logo-container {
@@ -271,6 +274,60 @@ export default function ZonesPage() {
             margin: 4px 0 0 0;
           }
           
+          /* المجموعات الكبيرة: تأخذ العرض الكامل مع 3 أعمدة بداخلها */
+          .large-group-card {
+            display: block;
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #fff;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          
+          .large-group-header {
+            background-color: #d12363;
+            color: #fff;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          
+          .large-group-items {
+            column-count: 3;
+            column-gap: 30px;
+            padding: 12px 20px;
+          }
+          
+          .item-row-compact {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px dashed #e2e8f0;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          
+          .compact-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: #334155;
+          }
+          
+          .compact-price {
+            font-size: 12px;
+            font-weight: 700;
+            color: #d12363;
+          }
+          
+          /* المجموعات الصغيرة: تخطيط عمودين متجاورين */
           .grid {
             column-count: 2;
             column-gap: 20px;
@@ -372,26 +429,47 @@ export default function ZonesPage() {
           </div>
         </div>
         
-        <div class="grid">
-          ${printableGroups.map(g => `
-            <div class="group-card">
-              <div class="group-header">
-                <span>${g.name}</span>
-                <span class="group-count">${g.items.length} أحياء</span>
-              </div>
-              <table class="table">
-                <tbody>
-                  ${g.items.map(item => `
-                    <tr class="tr">
-                      <td class="td-name">${item.name}</td>
-                      <td class="td-price">${Number(item.price).toLocaleString('en-US')} د.ع</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
+        <!-- المجموعات الكبيرة (عرض كامل بـ 3 أعمدة داخلية) -->
+        ${largeGroups.map(g => `
+          <div class="large-group-card">
+            <div class="large-group-header">
+              <span>${g.name}</span>
+              <span class="large-group-header-count" style="font-size: 12px; font-weight: 600; background-color: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 20px;">${g.items.length} أحياء</span>
             </div>
-          `).join('')}
-        </div>
+            <div class="large-group-items">
+              ${g.items.map(item => `
+                <div class="item-row-compact">
+                  <span class="compact-name">${item.name}</span>
+                  <span class="compact-price">${Number(item.price).toLocaleString('en-US')} د.ع</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('')}
+        
+        <!-- المجموعات الصغيرة (تخطيط عمودين متجاورين) -->
+        ${smallGroups.length > 0 ? `
+          <div class="grid">
+            ${smallGroups.map(g => `
+              <div class="group-card">
+                <div class="group-header">
+                  <span>${g.name}</span>
+                  <span class="group-count">${g.items.length} أحياء</span>
+                </div>
+                <table class="table">
+                  <tbody>
+                    ${g.items.map(item => `
+                      <tr class="tr">
+                        <td class="td-name">${item.name}</td>
+                        <td class="td-price">${Number(item.price).toLocaleString('en-US')} د.ع</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
         
         <div class="footer">
           <p class="footer-p">تيم السند للتوصيل الفوري - بغداد، العراق</p>
