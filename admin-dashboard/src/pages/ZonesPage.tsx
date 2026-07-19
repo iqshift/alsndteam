@@ -473,7 +473,6 @@ export default function ZonesPage() {
         
         <div class="footer">
           <p class="footer-p">تيم السند للتوصيل الفوري - بغداد، العراق</p>
-          <p class="footer-p">هذا الدليل تم توليده تلقائياً من لوحة التحكم ومطابق للأسعار الحالية المعتمدة في النظام.</p>
         </div>
       </body>
       </html>
