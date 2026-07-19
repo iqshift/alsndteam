@@ -279,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               child: Container(
-                minHeight: MediaQuery.of(context).size.height - 200,
+                constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height - 200),
                 alignment: Alignment.center,
                 padding: const EdgeInsets.all(32),
                 child: Column(

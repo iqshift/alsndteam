@@ -378,164 +378,171 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         if (state is OrderActive) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Low Balance Banner
-                const LowBalanceBanner(),
-                const SizedBox(height: 14),
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<OrderBloc>().add(OrderLoadMyOrders());
+              context.read<WalletBloc>().add(WalletLoadBalance());
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Low Balance Banner
+                  const LowBalanceBanner(),
+                  const SizedBox(height: 14),
 
-                // Availability Toggle Widget
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: _isAvailable ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
-                                shape: BoxShape.circle,
-                                boxShadow: _isAvailable
-                                    ? [
-                                        BoxShadow(
-                                          color: const Color(0xFF10B981).withOpacity(0.4),
-                                          blurRadius: 8,
-                                          spreadRadius: 2,
-                                        )
-                                      ]
-                                    : null,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              _isAvailable ? 'متاح لاستلام الطلبات' : 'غير متوفر للعمل',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E293B),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Switch(
-                          value: _isAvailable,
-                          activeColor: const Color(0xFF10B981),
-                          activeTrackColor: const Color(0xFF10B981).withOpacity(0.2),
-                          onChanged: (value) {
-                            setState(() => _isAvailable = value);
-                            // إخبار الـ BLoC لمسح الطلبات المعلقة فوراً عند الإطفاء
-                            context.read<OrderBloc>().add(
-                                  OrderAvailabilityChanged(isAvailable: value),
-                                );
-                            context.read<ApiService>().updateAvailability(
-                                  value ? 'available' : 'offline',
-                                );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Pending Broadcast Cards (الطلبات الواردة المتعددة)
-                if (state.pendingBroadcasts.isNotEmpty && state.activeOrder == null) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      'طلبات التوصيل المتاحة حالياً',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF1E293B),
-                        fontFamily: 'Cairo',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ...state.pendingBroadcasts.map((order) {
-                    return PendingOrderCard(
-                      key: ValueKey(order['orderId']),
-                      order: order,
-                      onAccept: () {
-                        context.read<OrderBloc>().add(
-                              OrderAcceptRequested(orderId: order['orderId']),
-                            );
-                      },
-                      onReject: () {
-                        context.read<OrderBloc>().add(
-                              OrderRejectRequested(orderId: order['orderId']),
-                            );
-                      },
-                    );
-                  }).toList(),
-                  const SizedBox(height: 10),
-                ],
-
-                // Active Order
-                if (state.activeOrder != null) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      'الطلب الحالي النشط',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  OrderCard(order: state.activeOrder!),
-                ] else if (state.pendingBroadcasts.isEmpty) ...[
-                  Center(
+                  // Availability Toggle Widget
+                  Card(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 60),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF5C73FF).withOpacity(0.06),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.two_wheeler_rounded,
-                              size: 64,
-                              color: Color(0xFF5C73FF),
-                            ),
+                          Row(
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: _isAvailable ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                                  shape: BoxShape.circle,
+                                  boxShadow: _isAvailable
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(0xFF10B981).withOpacity(0.4),
+                                            blurRadius: 8,
+                                            spreadRadius: 2,
+                                          )
+                                        ]
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                _isAvailable ? 'متاح لاستلام الطلبات' : 'غير متوفر للعمل',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1E293B),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'لا يوجد طلب نشط حالياً',
-                            style: TextStyle(
-                              color: Color(0xFF1E293B),
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'قم بتفعيل حالة التوفر لتلقي الطلبات الجديدة فوراً',
-                            style: TextStyle(
-                              color: Color(0xFF94A3B8),
-                              fontSize: 12,
-                            ),
+                          Switch(
+                            value: _isAvailable,
+                            activeColor: const Color(0xFF10B981),
+                            activeTrackColor: const Color(0xFF10B981).withOpacity(0.2),
+                            onChanged: (value) {
+                              setState(() => _isAvailable = value);
+                              // إخبار الـ BLoC لمسح الطلبات المعلقة فوراً عند الإطفاء
+                              context.read<OrderBloc>().add(
+                                    OrderAvailabilityChanged(isAvailable: value),
+                                  );
+                              context.read<ApiService>().updateAvailability(
+                                    value ? 'available' : 'offline',
+                                  );
+                            },
                           ),
                         ],
                       ),
                     ),
                   ),
+                  const SizedBox(height: 20),
+
+                  // Pending Broadcast Cards (الطلبات الواردة المتعددة)
+                  if (state.pendingBroadcasts.isNotEmpty && state.activeOrder == null) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        'طلبات التوصيل المتاحة حالياً',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1E293B),
+                          fontFamily: 'Cairo',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ...state.pendingBroadcasts.map((order) {
+                      return PendingOrderCard(
+                        key: ValueKey(order['orderId']),
+                        order: order,
+                        onAccept: () {
+                          context.read<OrderBloc>().add(
+                                OrderAcceptRequested(orderId: order['orderId']),
+                              );
+                        },
+                        onReject: () {
+                          context.read<OrderBloc>().add(
+                                OrderRejectRequested(orderId: order['orderId']),
+                              );
+                        },
+                      );
+                    }).toList(),
+                    const SizedBox(height: 10),
+                  ],
+
+                  // Active Order
+                  if (state.activeOrder != null) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 4),
+                      child: Text(
+                        'الطلب الحالي النشط',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    OrderCard(order: state.activeOrder!),
+                  ] else if (state.pendingBroadcasts.isEmpty) ...[
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 60),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF5C73FF).withOpacity(0.06),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.two_wheeler_rounded,
+                                size: 64,
+                                color: Color(0xFF5C73FF),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'لا يوجد طلب نشط حالياً',
+                              style: TextStyle(
+                                color: Color(0xFF1E293B),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'قم بتفعيل حالة التوفر لتلقي الطلبات الجديدة فوراً',
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           );
         }

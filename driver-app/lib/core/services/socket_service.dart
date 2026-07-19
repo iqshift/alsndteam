@@ -10,11 +10,13 @@ class SocketService {
   final _statusController = StreamController<Map<String, dynamic>>.broadcast();
   final _orderUnavailableController = StreamController<String>.broadcast();
   final _rewardController = StreamController<Map<String, dynamic>>.broadcast();
+  final _connectionController = StreamController<bool>.broadcast();
 
   Stream<Map<String, dynamic>> get onNewOrder => _orderController.stream;
   Stream<Map<String, dynamic>> get onOrderStatusUpdate => _statusController.stream;
   Stream<String> get onOrderUnavailable => _orderUnavailableController.stream;
   Stream<Map<String, dynamic>> get onWalletReward => _rewardController.stream;
+  Stream<bool> get onConnectionStatus => _connectionController.stream;
 
   void connect(String driverId) {
     _driverId = driverId;
@@ -25,6 +27,7 @@ class SocketService {
 
     _socket!.onConnect((_) {
       print('Socket connected');
+      _connectionController.add(true);
       _socket!.emit('join_driver', {'driverId': driverId});
     });
 
@@ -46,6 +49,7 @@ class SocketService {
 
     _socket!.onDisconnect((_) {
       print('Socket disconnected');
+      _connectionController.add(false);
     });
 
     _socket!.connect();
@@ -75,6 +79,7 @@ class SocketService {
     _statusController.close();
     _orderUnavailableController.close();
     _rewardController.close();
+    _connectionController.close();
     disconnect();
   }
 }

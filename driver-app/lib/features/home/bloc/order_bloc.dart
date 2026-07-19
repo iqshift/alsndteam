@@ -103,6 +103,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   StreamSubscription? _orderSub;
   StreamSubscription? _statusSub;
   StreamSubscription? _unavailableSub;
+  StreamSubscription? _connSub;
 
   // ← تُخزَّن الطلبات هنا إذا وصلت قبل اكتمال تحميل البيانات
   final List<Map<String, dynamic>> _pendingBroadcastBuffer = [];
@@ -142,6 +143,12 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
 
     _unavailableSub = _socketService.onOrderUnavailable.listen((orderId) {
       add(OrderUnavailable(orderId: orderId));
+    });
+
+    _connSub = _socketService.onConnectionStatus.listen((connected) {
+      if (connected) {
+        add(OrderLoadMyOrders());
+      }
     });
   }
 
@@ -401,6 +408,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     _orderSub?.cancel();
     _statusSub?.cancel();
     _unavailableSub?.cancel();
+    _connSub?.cancel();
     return super.close();
   }
 }
