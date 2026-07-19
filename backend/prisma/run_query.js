@@ -13,11 +13,11 @@ function uploadAndRun() {
   conn.on('ready', () => {
     conn.sftp((err, sftp) => {
       if (err) throw err;
-      const localFile = path.join(__dirname, 'check_order_broadcasts.js');
-      const remoteFile = '/var/www/alsnd-backend/prisma/check_order_broadcasts.js';
+      const localFile = path.join(__dirname, 'query.js');
+      const remoteFile = '/var/www/alsnd-backend/prisma/query.js';
       sftp.fastPut(localFile, remoteFile, {}, (err) => {
         if (err) throw err;
-        conn.exec('cd /var/www/alsnd-backend && node prisma/check_order_broadcasts.js && rm prisma/check_order_broadcasts.js', (err, stream) => {
+        conn.exec('cd /var/www/alsnd-backend && node prisma/query.js && rm prisma/query.js', (err, stream) => {
           if (err) throw err;
           stream.on('close', () => {
             conn.end();

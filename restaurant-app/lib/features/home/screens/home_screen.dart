@@ -213,63 +213,74 @@ class _HomeScreenState extends State<HomeScreen> {
           if (state.activeOrders.isNotEmpty) {
             return Container(
               color: const Color(0xFFF0F2FA),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(0, 8, 0, 100),
-                children: [
-                  // رأس الصفحة
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF5C6BC0).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  context.read<OrderBloc>().add(OrderLoadZones());
+                },
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(0, 8, 0, 100),
+                  children: [
+                    // رأس الصفحة
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF5C6BC0).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.radar_rounded,
+                                color: Color(0xFF5C6BC0), size: 18),
                           ),
-                          child: const Icon(Icons.radar_rounded,
-                              color: Color(0xFF5C6BC0), size: 18),
-                        ),
-                        const SizedBox(width: 10),
-                        const Text('الطلبات النشطة',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF1E293B),
-                            fontFamily: 'Cairo',
-                          ),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF5C6BC0).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text('${state.activeOrders.length} طلب',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF5C6BC0),
+                          const SizedBox(width: 10),
+                          const Text('الطلبات النشطة',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1E293B),
                               fontFamily: 'Cairo',
                             ),
                           ),
-                        ),
-                      ],
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF5C6BC0).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text('${state.activeOrders.length} طلب',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF5C6BC0),
+                                fontFamily: 'Cairo',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  // بطاقات الطلبات النشطة
-                  ...state.activeOrders.map((order) => OrderTrackingScreen(order: order)),
-                ],
+                    // بطاقات الطلبات النشطة
+                    ...state.activeOrders.map((order) => OrderTrackingScreen(order: order)),
+                  ],
+                ),
               ),
             );
           }
 
           // لا يوجد طلب نشط
-          return Center(
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<OrderBloc>().add(OrderLoadZones());
+            },
             child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Padding(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Container(
+                minHeight: MediaQuery.of(context).size.height - 200,
+                alignment: Alignment.center,
                 padding: const EdgeInsets.all(32),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

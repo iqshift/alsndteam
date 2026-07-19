@@ -92,6 +92,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   final SocketService _socketService;
   StreamSubscription? _statusSub;
   StreamSubscription? _acceptedSub;
+  StreamSubscription? _connSub;
 
   OrderBloc({
     required ApiService apiService,
@@ -122,6 +123,12 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
         orderId: data['orderId'],
         driverId: data['driverId'],
       ));
+    });
+
+    _connSub = _socketService.onConnectionStatus.listen((connected) {
+      if (connected) {
+        add(OrderLoadZones());
+      }
     });
   }
 
@@ -289,6 +296,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   Future<void> close() {
     _statusSub?.cancel();
     _acceptedSub?.cancel();
+    _connSub?.cancel();
     return super.close();
   }
 }

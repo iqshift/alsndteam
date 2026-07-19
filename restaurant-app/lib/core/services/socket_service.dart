@@ -4,10 +4,12 @@ import 'package:restaurant_app/core/config/constants.dart';class SocketService {
   io.Socket? _socket;
   final _statusController = StreamController<Map<String, dynamic>>.broadcast();
   final _acceptedController = StreamController<Map<String, dynamic>>.broadcast();
+  final _connectionController = StreamController<bool>.broadcast();
   final Set<String> _joinedRooms = {}; // قائمة الغرف التي تم الانضمام إليها لمنع ضياعها في حال تأخر الاتصال
 
   Stream<Map<String, dynamic>> get onOrderStatusUpdate => _statusController.stream;
   Stream<Map<String, dynamic>> get onOrderAccepted => _acceptedController.stream;
+  Stream<bool> get onConnectionStatus => _connectionController.stream;
 
   void connect(String restaurantId) {
     _socket = io.io(AppConstants.socketUrl, <String, dynamic>{
@@ -17,6 +19,7 @@ import 'package:restaurant_app/core/config/constants.dart';class SocketService {
 
     _socket!.onConnect((_) {
       print('Socket connected');
+      _connectionController.add(true);
       // إعادة الانضمام لجميع غرف الطلبات النشطة فور نجاح الاتصال
       for (var orderId in _joinedRooms) {
         _socket?.emit('join_order', {'orderId': orderId});
@@ -34,6 +37,7 @@ import 'package:restaurant_app/core/config/constants.dart';class SocketService {
 
     _socket!.onDisconnect((_) {
       print('Socket disconnected');
+      _connectionController.add(false);
     });
 
     _socket!.connect();
@@ -56,6 +60,7 @@ import 'package:restaurant_app/core/config/constants.dart';class SocketService {
   void dispose() {
     _statusController.close();
     _acceptedController.close();
+    _connectionController.close();
     disconnect();
   }
 }
