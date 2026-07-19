@@ -9,6 +9,7 @@ import {
   TrashIcon,
   PlusIcon,
   StoreIcon,
+  FileTextIcon,
 } from '../components/common/Icons';
 import { useAuth } from '../hooks/useAuth';
 
@@ -158,6 +159,273 @@ export default function ZonesPage() {
       setExpandedZones(prev => ({ ...prev, ...toExpand }));
     }
   }, [searchQuery, zones]);
+
+  const handleExportPDF = () => {
+    if (!selectedRZoneObj) return;
+
+    const rZoneName = selectedRZoneObj.name;
+    const logoUrl = window.location.origin + '/logo_remove_bg.png';
+    
+    // تجميع البيانات وتجهيز المجموعات والأحياء التابعة لها
+    const printableGroups = groups.map(g => {
+      const groupItems = children.filter(c => c.parentId === g.id).map(c => ({
+        name: c.name,
+        price: customPricesMap[c.id]?.deliveryPrice ?? 0,
+      })).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+
+      return {
+        name: g.name,
+        items: groupItems,
+      };
+    }).filter(g => g.items.length > 0);
+
+    const standaloneItems = standalones.map(s => ({
+      name: s.name,
+      price: customPricesMap[s.id]?.deliveryPrice ?? 0,
+    })).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+
+    if (standaloneItems.length > 0) {
+      printableGroups.push({
+        name: 'أحياء ومناطق أخرى',
+        items: standaloneItems,
+      });
+    }
+
+    const today = new Date().toLocaleDateString('ar-IQ', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    // توليد كود HTML للتصميم الأنيق
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>أسعار توصيل - تيم السند</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+          
+          @page {
+            size: A4;
+            margin: 15mm;
+          }
+          
+          body {
+            font-family: 'Cairo', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #1e293b;
+            background-color: #fff;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #d12363;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+          }
+          
+          .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          }
+          
+          .logo-text {
+            font-size: 22px;
+            font-weight: 800;
+            color: #d12363;
+            margin: 0;
+            line-height: 1.2;
+          }
+          
+          .logo-sub {
+            font-size: 11px;
+            color: #64748b;
+            margin: 2px 0 0 0;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+          }
+          
+          .title-container {
+            text-align: right;
+          }
+          
+          .main-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0;
+          }
+          
+          .sub-title {
+            font-size: 14px;
+            color: #d12363;
+            font-weight: 700;
+            margin: 4px 0 0 0;
+          }
+          
+          .grid {
+            column-count: 2;
+            column-gap: 20px;
+            width: 100%;
+          }
+          
+          .group-card {
+            display: inline-block;
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #fff;
+            break-inside: avoid;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+          }
+          
+          .group-header {
+            background-color: #d12363;
+            color: #fff;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          
+          .group-count {
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+          }
+          
+          .table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          
+          .tr {
+            border-bottom: 1px solid #f1f5f9;
+          }
+          
+          .tr:last-child {
+            border-bottom: none;
+          }
+          
+          .tr:nth-child(even) {
+            background-color: #fafafa;
+          }
+          
+          .td-name {
+            padding: 9px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #334155;
+            text-align: right;
+          }
+          
+          .td-price {
+            padding: 9px 16px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #d12363;
+            text-align: left;
+          }
+          
+          .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 11px;
+            color: #64748b;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 15px;
+            page-break-inside: avoid;
+          }
+          
+          .footer-p {
+            margin: 4px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title-container">
+            <h1 class="main-title">دليل أجور التوصيل الرسمي</h1>
+            <p class="sub-title">المنطقة الجغرافية للمطاعم: ${rZoneName}</p>
+          </div>
+          <div class="logo-container">
+            <div style="text-align: right; display: flex; flex-direction: column; justify-content: center;">
+              <h2 class="logo-text">تيم السند</h2>
+              <p class="logo-sub">للشحن والتوصيل الفوري</p>
+              <p style="margin: 3px 0 0 0; font-size: 10px; color: #64748b; font-weight: 700;">تاريخ الإصدار: ${today}</p>
+            </div>
+            <img src="${logoUrl}" alt="تيم السند" style="height: 55px; object-fit: contain; margin-right: 12px;" />
+          </div>
+        </div>
+        
+        <div class="grid">
+          ${printableGroups.map(g => `
+            <div class="group-card">
+              <div class="group-header">
+                <span>${g.name}</span>
+                <span class="group-count">${g.items.length} أحياء</span>
+              </div>
+              <table class="table">
+                <tbody>
+                  ${g.items.map(item => `
+                    <tr class="tr">
+                      <td class="td-name">${item.name}</td>
+                      <td class="td-price">${Number(item.price).toLocaleString('en-US')} د.ع</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `).join('')}
+        </div>
+        
+        <div class="footer">
+          <p class="footer-p">تيم السند للتوصيل الفوري - بغداد، العراق</p>
+          <p class="footer-p">هذا الدليل تم توليده تلقائياً من لوحة التحكم ومطابق للأسعار الحالية المعتمدة في النظام.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(htmlContent);
+      doc.close();
+
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      }, 500);
+    }
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedZones(prev => ({ ...prev, [id]: !prev[id] }));
@@ -654,6 +922,32 @@ export default function ZonesPage() {
               >
                 <PlusIcon size={15} />
                 <span>+ إضافة حي جديد</span>
+              </button>
+            )}
+            {/* زر تصدير PDF */}
+            {selectedRZoneObj && (
+              <button
+                className="btn"
+                onClick={handleExportPDF}
+                style={{
+                  backgroundColor: '#d12363',
+                  color: '#fff',
+                  padding: '8px 16px',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#b01a50')}
+                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#d12363')}
+              >
+                <FileTextIcon size={15} />
+                <span>تصدير قائمة الأسعار (PDF)</span>
               </button>
             )}
           </div>
