@@ -11,7 +11,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
-const socket = io('http://localhost:3000');
+const socket = io(`${window.location.protocol}//${window.location.hostname}:3000`);
 
 interface DriverLocation {
   id: string;
@@ -146,7 +146,7 @@ export default function TrackingPage({ fullscreen = false }: { fullscreen?: bool
 
   const loadDrivers = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/drivers/admin', {
+      const res = await fetch(`${window.location.protocol}//${window.location.hostname}:3000/api/drivers/admin`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` },
       });
       const allDrivers = await res.json();

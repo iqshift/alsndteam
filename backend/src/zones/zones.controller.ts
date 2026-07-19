@@ -3,6 +3,7 @@ import { ZonesService } from './zones.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { UuidParam } from '../common/decorators/uuid.decorator';
+import { Permissions } from '../common/decorators/permissions.decorator';
 
 @Controller('zones')
 @UseGuards(RolesGuard)
@@ -11,6 +12,7 @@ export class ZonesController {
 
   @Post()
   @Roles('admin')
+  @Permissions({ resource: 'zones', action: 'create' })
   create(
     @Body()
     body: {
@@ -47,6 +49,7 @@ export class ZonesController {
 
   @Put(':id')
   @Roles('admin')
+  @Permissions({ resource: 'zones', action: 'update' })
   update(
     @UuidParam('id') id: string,
     @Body()
@@ -65,7 +68,35 @@ export class ZonesController {
 
   @Delete(':id')
   @Roles('admin')
+  @Permissions({ resource: 'zones', action: 'delete' })
   delete(@UuidParam('id') id: string) {
     return this.zonesService.delete(id);
+  }
+
+  // ─── Restaurant Zones (مناطق المطاعم - مجرد اسم فقط) ───
+  @Get('restaurant-zones/all')
+  findAllRestaurantZones() {
+    return this.zonesService.findAllRestaurantZones();
+  }
+
+  @Post('restaurant-zones')
+  @Roles('admin')
+  @Permissions({ resource: 'zones', action: 'create' })
+  createRestaurantZone(@Body() body: { name: string }) {
+    return this.zonesService.createRestaurantZone(body.name);
+  }
+
+  @Put('restaurant-zones/:id')
+  @Roles('admin')
+  @Permissions({ resource: 'zones', action: 'update' })
+  updateRestaurantZone(@UuidParam('id') id: string, @Body() body: { name: string }) {
+    return this.zonesService.updateRestaurantZone(id, body.name);
+  }
+
+  @Delete('restaurant-zones/:id')
+  @Roles('admin')
+  @Permissions({ resource: 'zones', action: 'delete' })
+  deleteRestaurantZone(@UuidParam('id') id: string) {
+    return this.zonesService.deleteRestaurantZone(id);
   }
 }

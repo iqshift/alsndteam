@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -184,5 +184,124 @@ export class AuthService {
     });
 
     return { accessToken, refreshToken };
+  }
+
+  async updateAdminProfile(adminId: string, data: { name?: string; phone?: string; password?: string }) {
+    if (data.phone) {
+      const existing = await this.prisma.admin.findFirst({
+        where: {
+          phone: data.phone,
+          NOT: { id: adminId }
+        }
+      });
+      if (existing) throw new ConflictException('رقم الهاتف مسجل بالفعل لدى مشرف آخر');
+    }
+
+    const updateData: any = {};
+    if (data.name) updateData.name = data.name;
+    if (data.phone) updateData.phone = data.phone;
+    if (data.password) {
+      updateData.passwordHash = await bcrypt.hash(data.password, 10);
+    }
+
+    const updated = await this.prisma.admin.update({
+      where: { id: adminId },
+      data: updateData,
+    });
+
+    return {
+      id: updated.id,
+      name: updated.name,
+      phone: updated.phone,
+      role: updated.role,
+    };
+  }
+
+  async getAllStaff() {
+    return this.prisma.admin.findMany({
+      where: { role: 'staff' },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        role: true,
+        permissions: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createStaff(data: { name: string; phone: string; password: string; permissions?: any }) {
+    const existing = await this.prisma.admin.findUnique({
+      where: { phone: data.phone },
+    });
+    if (existing) throw new ConflictException('رقم الهاتف مسجل مسبقاً لمشرف أو مساعد آخر');
+
+    const passwordHash = await bcrypt.hash(data.password, 10);
+
+    return this.prisma.admin.create({
+      data: {
+        name: data.name,
+        phone: data.phone,
+        passwordHash,
+        role: 'staff',
+        permissions: data.permissions || {},
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        role: true,
+        permissions: true,
+      },
+    });
+  }
+
+  async updateStaff(id: string, data: { name?: string; phone?: string; password?: string; permissions?: any }) {
+    const staff = await this.prisma.admin.findUnique({ where: { id } });
+    if (!staff || staff.role !== 'staff') {
+      throw new NotFoundException('حساب المساعد غير موجود');
+    }
+
+    if (data.phone) {
+      const existing = await this.prisma.admin.findFirst({
+        where: {
+          phone: data.phone,
+          NOT: { id },
+        },
+      });
+      if (existing) throw new ConflictException('رقم الهاتف مسجل لمستخدم آخر');
+    }
+
+    const updateData: any = {};
+    if (data.name) updateData.name = data.name;
+    if (data.phone) updateData.phone = data.phone;
+    if (data.permissions) updateData.permissions = data.permissions;
+    if (data.password) {
+      updateData.passwordHash = await bcrypt.hash(data.password, 10);
+    }
+
+    return this.prisma.admin.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        role: true,
+        permissions: true,
+      },
+    });
+  }
+
+  async deleteStaff(id: string) {
+    const staff = await this.prisma.admin.findUnique({ where: { id } });
+    if (!staff || staff.role !== 'staff') {
+      throw new NotFoundException('حساب المساعد غير موجود');
+    }
+
+    await this.prisma.admin.delete({ where: { id } });
+    return { message: 'تم حذف المساعد بنجاح' };
   }
 }

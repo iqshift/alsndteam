@@ -134,9 +134,25 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
             final parentGroups = zones.where((z) => z['isGroup'] == true).toList();
             final neighborhoods = zones.where((z) => z['isGroup'] != true).toList();
 
+            final activeParentGroups = parentGroups.where((g) {
+              return neighborhoods.any((n) => n['parentId'] == g['id']);
+            }).toList();
+
+            activeParentGroups.sort((a, b) {
+              final countA = neighborhoods.where((n) => n['parentId'] == a['id']).length;
+              final countB = neighborhoods.where((n) => n['parentId'] == b['id']).length;
+              return countB.compareTo(countA);
+            });
+
             final categories = [
-              {'id': 'all', 'name': 'الكل'},
-              ...parentGroups,
+              {'id': 'all', 'name': 'الكل (${neighborhoods.length})'},
+              ...activeParentGroups.map((g) {
+                final count = neighborhoods.where((n) => n['parentId'] == g['id']).length;
+                return {
+                  'id': g['id'],
+                  'name': '${g['name']} ($count)',
+                };
+              }),
             ];
 
             final filteredNeighborhoods = neighborhoods.where((n) {
@@ -195,37 +211,31 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          SizedBox(
-                            height: 42,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: categories.length,
-                              itemBuilder: (context, index) {
-                                final cat = categories[index];
-                                final isSelected = _selectedCategoryId == cat['id'];
-                                return Padding(
-                                  padding: const EdgeInsets.only(left: 8.0),
-                                  child: ChoiceChip(
-                                    label: Text(
-                                      cat['name'].toString(),
-                                      style: TextStyle(
-                                        fontFamily: 'Cairo',
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                        color: isSelected ? Colors.white : Colors.black87,
-                                      ),
-                                    ),
-                                    selected: isSelected,
-                                    selectedColor: Theme.of(context).primaryColor,
-                                    backgroundColor: const Color(0xFFF1F5F9),
-                                    onSelected: (selected) {
-                                      setState(() {
-                                        _selectedCategoryId = cat['id'].toString();
-                                      });
-                                    },
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: categories.map((cat) {
+                              final isSelected = _selectedCategoryId == cat['id'].toString();
+                              return ChoiceChip(
+                                label: Text(
+                                  cat['name'].toString(),
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 11,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    color: isSelected ? Colors.white : const Color(0xFF334155),
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                                selected: isSelected,
+                                selectedColor: Theme.of(context).primaryColor,
+                                backgroundColor: const Color(0xFFF1F5F9),
+                                onSelected: (selected) {
+                                  setState(() {
+                                    _selectedCategoryId = cat['id'].toString();
+                                  });
+                                },
+                              );
+                            }).toList(),
                           ),
                         ],
                       ),

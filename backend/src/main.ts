@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
@@ -26,7 +27,7 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalGuards(app.get(JwtAuthGuard), app.get(RolesGuard));
+  app.useGlobalGuards(app.get(JwtAuthGuard), app.get(RolesGuard), app.get(PermissionsGuard));
 
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');

@@ -149,4 +149,37 @@ export class ZonesService {
 
     return inside;
   }
+
+  // ─── Restaurant Zones (مناطق المطاعم - مجرد اسم فقط) ───
+  async findAllRestaurantZones() {
+    return this.prisma.restaurantZone.findMany({
+      orderBy: { name: 'asc' },
+      include: {
+        _count: {
+          select: { restaurants: true },
+        },
+      },
+    });
+  }
+
+  async createRestaurantZone(name: string) {
+    if (!name || !name.trim()) throw new BadRequestException('اسم منطقة المطعم مطلوب');
+    return this.prisma.restaurantZone.create({
+      data: { name: name.trim() },
+    });
+  }
+
+  async updateRestaurantZone(id: string, name: string) {
+    if (!name || !name.trim()) throw new BadRequestException('اسم منطقة المطعم مطلوب');
+    return this.prisma.restaurantZone.update({
+      where: { id },
+      data: { name: name.trim() },
+    });
+  }
+
+  async deleteRestaurantZone(id: string) {
+    return this.prisma.restaurantZone.delete({
+      where: { id },
+    });
+  }
 }

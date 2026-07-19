@@ -213,7 +213,7 @@ export default function WalletPage() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24, padding: '16px 0', borderBottom: '1px solid var(--border)' }}>
               {selectedDriver.photo ? (
                 <img
-                  src={`http://localhost:3000${selectedDriver.photo}`}
+                  src={`${window.location.protocol}//${window.location.hostname}:3000${selectedDriver.photo}`}
                   alt={selectedDriver.name}
                   style={{ width: 70, height: 70, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', marginBottom: 12 }}
                 />

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 
@@ -17,6 +17,7 @@ export class RestaurantsService {
     imageUrl?: string;
     billingMode?: string;
     subscriptionExpiresAt?: string | null;
+    restaurantZoneId?: string | null;
   }) {
     const existing = await this.prisma.restaurant.findUnique({
       where: { phone: data.phone },
@@ -39,6 +40,7 @@ export class RestaurantsService {
           : data.billingMode === 'subscription'
             ? (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })()
             : null,
+        restaurantZoneId: data.restaurantZoneId || null,
       },
     });
 
@@ -70,6 +72,8 @@ export class RestaurantsService {
         imageUrl: true,
         billingMode: true,
         subscriptionExpiresAt: true,
+        restaurantZoneId: true,
+        restaurantZone: { select: { id: true, name: true } },
         createdAt: true,
       },
     });
@@ -77,7 +81,13 @@ export class RestaurantsService {
     return restaurant;
   }
 
+  // ─── Restaurant: Get Zones with Dynamic Pricing ───
   async getZones(restaurantId: string) {
+    const restaurant = await this.prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { restaurantZoneId: true },
+    });
+
     const usages = await this.prisma.restaurantZoneUsage.findMany({
       where: { restaurantId },
       orderBy: { usageCount: 'desc' },
@@ -88,24 +98,78 @@ export class RestaurantsService {
       },
     });
 
-    // Get all active zones
-    const allZones = await this.prisma.zone.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true, deliveryPrice: true, driverDeduction: true, isGroup: true, parentId: true },
+    let targetZoneId = restaurant?.restaurantZoneId;
+    if (!targetZoneId) {
+      const defaultRZone = await this.prisma.restaurantZone.findFirst({
+        where: { name: 'السيديه' },
+      }) || await this.prisma.restaurantZone.findFirst();
+      if (defaultRZone) {
+        targetZoneId = defaultRZone.id;
+      }
+    }
+
+    if (!targetZoneId) {
+      return [];
+    }
+
+    // للمطاعم المربوطة بمنطقة مطعم: نمرر حصرياً الأحياء المسعرة لتلك المنطقة + مجموعاتها الرئيسية
+    const dynamicPrices = await this.prisma.restaurantZonePrice.findMany({
+      where: { restaurantZoneId: targetZoneId },
+      include: {
+        deliveryZone: {
+          select: { id: true, name: true, isActive: true, isGroup: true, parentId: true },
+        },
+      },
     });
 
-    // Merge: used zones first (sorted by usage), then unused zones
-    const usedZoneIds = new Set(usages.map((u) => u.zoneId));
-    const unusedZones = allZones.filter((z) => !usedZoneIds.has(z.id));
+    const activePricedZoneMap = new Map<string, any>();
+    const parentIdsToInclude = new Set<string>();
 
-    return [
-      ...usages.map((u) => ({
-        ...u.zone,
-        usageCount: u.usageCount,
-        lastUsedAt: u.lastUsedAt,
-      })),
-      ...unusedZones,
-    ];
+    dynamicPrices.forEach((p) => {
+      if (p.deliveryZone && p.deliveryZone.isActive) {
+        activePricedZoneMap.set(p.deliveryZoneId, {
+          id: p.deliveryZone.id,
+          name: p.deliveryZone.name,
+          deliveryPrice: Number(p.deliveryPrice),
+          driverDeduction: Number(p.driverDeduction),
+          isGroup: p.deliveryZone.isGroup,
+          parentId: p.deliveryZone.parentId,
+        });
+        if (p.deliveryZone.parentId) {
+          parentIdsToInclude.add(p.deliveryZone.parentId);
+        }
+      }
+    });
+
+    // جلب المجموعات الرئيسية التابعة للأحياء المسعرة
+    if (parentIdsToInclude.size > 0) {
+      const parentGroups = await this.prisma.zone.findMany({
+        where: { id: { in: Array.from(parentIdsToInclude) }, isActive: true, isGroup: true },
+        select: { id: true, name: true, deliveryPrice: true, driverDeduction: true, isGroup: true, parentId: true },
+      });
+      parentGroups.forEach((g) => {
+        if (!activePricedZoneMap.has(g.id)) {
+          activePricedZoneMap.set(g.id, {
+            ...g,
+            deliveryPrice: 0,
+            driverDeduction: 0,
+          });
+        }
+      });
+    }
+
+    // فرز حسب الاستخدام الأكثر تكراراً للمطعم
+    const usedMap = new Map(usages.map((u) => [u.zoneId, u]));
+    const result = Array.from(activePricedZoneMap.values()).map((zone) => {
+      const usage = usedMap.get(zone.id);
+      return {
+        ...zone,
+        usageCount: usage ? usage.usageCount : 0,
+        lastUsedAt: usage ? usage.lastUsedAt : null,
+      };
+    });
+
+    return result;
   }
 
   async findAll() {
@@ -120,6 +184,8 @@ export class RestaurantsService {
         lng: true,
         billingMode: true,
         subscriptionExpiresAt: true,
+        restaurantZoneId: true,
+        restaurantZone: { select: { id: true, name: true } },
         createdAt: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -170,6 +236,7 @@ export class RestaurantsService {
       imageUrl?: string;
       billingMode?: string;
       subscriptionExpiresAt?: string | null;
+      restaurantZoneId?: string | null;
     },
   ) {
     const updateData: any = {};
@@ -179,6 +246,7 @@ export class RestaurantsService {
     if (data.lng !== undefined) updateData.lng = data.lng;
     if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
     if (data.billingMode !== undefined) updateData.billingMode = data.billingMode;
+    if (data.restaurantZoneId !== undefined) updateData.restaurantZoneId = data.restaurantZoneId || null;
     if (data.subscriptionExpiresAt !== undefined) {
       updateData.subscriptionExpiresAt = data.subscriptionExpiresAt ? new Date(data.subscriptionExpiresAt) : null;
     } else if (data.billingMode === 'subscription') {
@@ -222,5 +290,77 @@ export class RestaurantsService {
       where: { id },
     });
   }
-}
 
+  // ═══════════════════════════════════════════════════════════
+  //  إدارة أسعار التوصيل الديناميكية (Restaurant Zone Pricing)
+  // ═══════════════════════════════════════════════════════════
+
+  // جلب كل أسعار التوصيل لمنطقة انطلاق محددة
+  async getZonePrices(restaurantZoneId: string) {
+    const rZone = await this.prisma.restaurantZone.findUnique({ where: { id: restaurantZoneId } });
+    if (!rZone) throw new NotFoundException('منطقة المطعم غير موجودة');
+
+    const prices = await this.prisma.restaurantZonePrice.findMany({
+      where: { restaurantZoneId },
+      include: {
+        deliveryZone: { select: { id: true, name: true, isGroup: true, parentId: true, isActive: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return prices;
+  }
+
+  // جلب كل مناطق الانطلاق التي لها أسعار مُعرَّفة (للعرض في الـ dropdown)
+  async getAllZonePriceGroups() {
+    return this.prisma.restaurantZone.findMany({
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  // إنشاء أو تحديث سعر توصيل لزوج (منطقة المطعم ← حي التوصيل)
+  async upsertZonePrice(data: {
+    restaurantZoneId: string;
+    deliveryZoneId: string;
+    deliveryPrice: number;
+    driverDeduction: number;
+  }) {
+    const [originZone, deliveryZone] = await Promise.all([
+      this.prisma.restaurantZone.findUnique({ where: { id: data.restaurantZoneId } }),
+      this.prisma.zone.findUnique({ where: { id: data.deliveryZoneId } }),
+    ]);
+    if (!originZone) throw new NotFoundException('منطقة المطعم غير موجودة');
+    if (!deliveryZone) throw new NotFoundException('منطقة التوصيل غير موجودة');
+
+    return this.prisma.restaurantZonePrice.upsert({
+      where: {
+        restaurantZoneId_deliveryZoneId: {
+          restaurantZoneId: data.restaurantZoneId,
+          deliveryZoneId: data.deliveryZoneId,
+        },
+      },
+      create: {
+        restaurantZoneId: data.restaurantZoneId,
+        deliveryZoneId: data.deliveryZoneId,
+        deliveryPrice: data.deliveryPrice,
+        driverDeduction: data.driverDeduction,
+      },
+      update: {
+        deliveryPrice: data.deliveryPrice,
+        driverDeduction: data.driverDeduction,
+      },
+    });
+  }
+
+  // حذف سعر توصيل معين
+  async deleteZonePrice(restaurantZoneId: string, deliveryZoneId: string) {
+    return this.prisma.restaurantZonePrice.delete({
+      where: {
+        restaurantZoneId_deliveryZoneId: {
+          restaurantZoneId,
+          deliveryZoneId,
+        },
+      },
+    });
+  }
+}

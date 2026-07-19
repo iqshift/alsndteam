@@ -14,6 +14,7 @@ model Admin {
   phone        String   @unique @db.VarChar(20)
   passwordHash String   @map("password_hash")
   role         String   @default("admin") @db.VarChar(20)
+  permissions  Json?
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -32,7 +33,7 @@ model AdminSettings {
   @@map("admin_settings")
 }
 
-// ============ Zones ============
+// ============ Zones (مناطق وأحياء التوصيل) ============
 model Zone {
   id              String   @id @default(uuid())
   name            String   @db.VarChar(100)
@@ -51,23 +52,57 @@ model Zone {
   orders              Order[]
   restaurantZoneUsage RestaurantZoneUsage[]
 
+  // أسعار التوصيل الديناميكية لهذه المنطقة كوجهة توصيل
+  deliveryZonePrices  RestaurantZonePrice[] @relation("DeliveryZonePrices")
+
   @@map("zones")
+}
+
+// ============ Restaurant Zones (مناطق المطاعم - مجرد اسم فقط) ============
+model RestaurantZone {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  restaurants          Restaurant[]
+  restaurantZonePrices RestaurantZonePrice[]
+
+  @@map("restaurant_zones")
+}
+
+// ============ Restaurant Zone Prices (أسعار التوصيل حسب منطقة المطعم) ============
+model RestaurantZonePrice {
+  restaurantZoneId String   @map("restaurant_zone_id")  // منطقة المطعم
+  deliveryZoneId   String   @map("delivery_zone_id")    // حي/منطقة التوصيل
+  deliveryPrice    Decimal  @map("delivery_price") @db.Decimal(10, 2)
+  driverDeduction  Decimal  @map("driver_deduction") @db.Decimal(10, 2)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  restaurantZone   RestaurantZone @relation(fields: [restaurantZoneId], references: [id], onDelete: Cascade)
+  deliveryZone     Zone           @relation("DeliveryZonePrices", fields: [deliveryZoneId], references: [id], onDelete: Cascade)
+
+  @@id([restaurantZoneId, deliveryZoneId])
+  @@map("restaurant_zone_prices")
 }
 
 // ============ Restaurants ============
 model Restaurant {
-  id           String   @id @default(uuid())
-  name         String   @db.VarChar(150)
-  phone        String   @unique @db.VarChar(20)
-  lat          Decimal  @db.Decimal(10, 7)
-  lng          Decimal  @db.Decimal(10, 7)
-  passwordHash String   @map("password_hash") @db.Text
-  status       String   @default("active") @db.VarChar(20)
-  imageUrl     String?  @map("image_url") @db.Text
-  billingMode  String   @default("commission") @map("billing_mode") @db.VarChar(20)
+  id                 String   @id @default(uuid())
+  name               String   @db.VarChar(150)
+  phone              String   @unique @db.VarChar(20)
+  lat                Decimal  @db.Decimal(10, 7)
+  lng                Decimal  @db.Decimal(10, 7)
+  passwordHash       String   @map("password_hash") @db.Text
+  status             String   @default("active") @db.VarChar(20)
+  imageUrl           String?  @map("image_url") @db.Text
+  billingMode        String   @default("commission") @map("billing_mode") @db.VarChar(20)
   subscriptionExpiresAt DateTime? @map("subscription_expires_at")
-  createdAt    DateTime @default(now()) @map("created_at")
+  restaurantZoneId   String?  @map("restaurant_zone_id") // منطقة وجود المطعم
+  createdAt          DateTime @default(now()) @map("created_at")
 
+  restaurantZone      RestaurantZone? @relation(fields: [restaurantZoneId], references: [id], onDelete: SetNull)
   orders              Order[]
   restaurantZoneUsage RestaurantZoneUsage[]
 

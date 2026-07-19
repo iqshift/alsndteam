@@ -29,7 +29,7 @@ export default function EmployeeDetailPage() {
       const { data } = await employeesAPI.getById(id!);
       setEmployee(data);
     } catch {
-      alert('فشل تحميل تفاصيل الموظف');
+      alert('فشل تحميل تفاصيل الوكيل');
       navigate('/employees');
     } finally {
       setLoading(false);
@@ -42,7 +42,7 @@ export default function EmployeeDetailPage() {
       const { data } = await employeesAPI.getReport(id!, period);
       setReport(data);
     } catch {
-      alert('فشل تحميل تقرير الموظف');
+      alert('فشل تحميل تقرير الوكيل');
     } finally {
       setReportLoading(false);
     }
@@ -64,7 +64,7 @@ export default function EmployeeDetailPage() {
   }
 
   if (!employee) {
-    return <div style={{ textAlign: 'center', padding: 40, color: '#ef4444', fontFamily: 'Cairo' }}>الموظف غير موجود</div>;
+    return <div style={{ textAlign: 'center', padding: 40, color: '#ef4444', fontFamily: 'Cairo' }}>الوكيل غير موجود</div>;
   }
 
   const stats = report?.stats || {
@@ -83,7 +83,7 @@ export default function EmployeeDetailPage() {
             style={{ marginBottom: 12, padding: '4px 8px', fontSize: 13 }}
             onClick={() => navigate('/employees')}
           >
-            ← العودة للموظفين
+            ← العودة لوكلاء الشحن
           </button>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <UserIcon size={32} style={{ color: 'var(--primary)' }} />
@@ -94,7 +94,7 @@ export default function EmployeeDetailPage() {
           className={`btn ${employee.status === 'active' ? 'btn-danger' : 'btn-success'}`}
           onClick={toggleStatus}
         >
-          {employee.status === 'active' ? 'تعليق الموظف' : 'تفعيل الموظف'}
+          {employee.status === 'active' ? 'تعليق حساب الوكيل' : 'تفعيل حساب الوكيل'}
         </button>
       </div>
 

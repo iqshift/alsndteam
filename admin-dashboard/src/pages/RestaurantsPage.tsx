@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { restaurantsAPI } from '../services/api';
-import { StoreIcon, CheckCircleIcon, EditIcon, TrashIcon, EyeIcon, EyeOffIcon } from '../components/common/Icons';
+import { restaurantsAPI, restaurantZonesAPI } from '../services/api';
+import { StoreIcon, CheckCircleIcon, EditIcon, TrashIcon, EyeIcon, EyeOffIcon, MapPinIcon } from '../components/common/Icons';
 import { useSearch } from '../hooks/useSearch';
+import { useAuth } from '../hooks/useAuth';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -24,7 +25,13 @@ function generatePassword(length = 8): string {
 export default function RestaurantsPage() {
   const navigate = useNavigate();
   const { searchQuery } = useSearch();
+  const { user } = useAuth();
+  const canCreate = user?.role === 'admin' || user?.permissions?.restaurants?.create === true;
+  const canUpdate = user?.role === 'admin' || user?.permissions?.restaurants?.update === true;
+  const canDelete = user?.role === 'admin' || user?.permissions?.restaurants?.delete === true;
+
   const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [originZones, setOriginZones] = useState<any[]>([]); // الأقسام الرئيسية كمناطق انطلاق
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -35,6 +42,7 @@ export default function RestaurantsPage() {
     imageUrl: '',
     billingMode: 'commission',
     subscriptionExpiresAt: '',
+    restaurantZoneId: '',
   });
   const [editingRestaurant, setEditingRestaurant] = useState<any | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -51,7 +59,7 @@ export default function RestaurantsPage() {
   const markerRef = useRef<L.Marker | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { loadRestaurants(); }, []);
+  useEffect(() => { loadRestaurants(); loadOriginZones(); }, []);
 
   useEffect(() => {
     if (showForm && mapContainerRef.current && !mapRef.current) {
@@ -172,6 +180,15 @@ export default function RestaurantsPage() {
     }
   };
 
+  const loadOriginZones = async () => {
+    try {
+      const { data } = await restaurantZonesAPI.getAll();
+      setOriginZones(data);
+    } catch (err) {
+      console.error('Failed to load restaurant zones:', err);
+    }
+  };
+
   const handleToggleStatus = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     setRestaurants(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
@@ -192,6 +209,7 @@ export default function RestaurantsPage() {
       imageUrl: '',
       billingMode: 'commission',
       subscriptionExpiresAt: '',
+      restaurantZoneId: '',
     });
     setLogoFile(null);
     setLogoPreview('');
@@ -212,6 +230,7 @@ export default function RestaurantsPage() {
       imageUrl: r.imageUrl || '',
       billingMode: r.billingMode || 'commission',
       subscriptionExpiresAt: r.subscriptionExpiresAt ? r.subscriptionExpiresAt.substring(0, 10) : '',
+      restaurantZoneId: r.restaurantZoneId || '',
     });
     setLogoPreview(r.imageUrl || '');
     setLogoFile(null);
@@ -269,6 +288,7 @@ export default function RestaurantsPage() {
           imageUrl,
           billingMode: formData.billingMode,
           subscriptionExpiresAt: formData.billingMode === 'subscription' && formData.subscriptionExpiresAt ? formData.subscriptionExpiresAt : null,
+          restaurantZoneId: formData.restaurantZoneId || null,
         });
       } else {
         await restaurantsAPI.create({
@@ -280,6 +300,7 @@ export default function RestaurantsPage() {
           imageUrl,
           billingMode: formData.billingMode,
           subscriptionExpiresAt: formData.billingMode === 'subscription' && formData.subscriptionExpiresAt ? formData.subscriptionExpiresAt : null,
+          restaurantZoneId: formData.restaurantZoneId || null,
         });
       }
 
@@ -301,7 +322,9 @@ export default function RestaurantsPage() {
     <div>
       <div className="page-header">
         <h1>المطاعم</h1>
-        <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ مطعم جديد</button>
+        {canCreate && (
+          <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ مطعم جديد</button>
+        )}
       </div>
 
       <div className="stats-grid">
@@ -325,6 +348,7 @@ export default function RestaurantsPage() {
             <tr>
               <th>الاسم</th>
               <th>الهاتف</th>
+              <th>منطقة المطعم</th>
               <th>الحالة</th>
               <th>تاريخ التسجيل</th>
               <th>إجراءات</th>
@@ -332,9 +356,9 @@ export default function RestaurantsPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>جاري التحميل...</td></tr>
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>جاري التحميل...</td></tr>
             ) : filteredRestaurants.length === 0 ? (
-              <tr><td colSpan={5}>
+              <tr><td colSpan={6}>
                 <div className="empty-state">
                   <div className="empty-state-icon">
                     <StoreIcon size={48} />
@@ -379,12 +403,23 @@ export default function RestaurantsPage() {
                   </td>
                   <td><span style={{ direction: 'ltr', display: 'inline-block' }}>{r.phone}</span></td>
                   <td>
+                    {r.restaurantZone ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 700, color: 'var(--primary)', fontSize: 13 }}>
+                        <MapPinIcon size={13} style={{ color: 'var(--primary)' }} />
+                        {r.restaurantZone.name}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
+                    )}
+                  </td>
+                  <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }} onClick={e => e.stopPropagation()}>
                       <label className="toggle-switch" title={r.status === 'active' ? 'تعليق المطعم' : 'تفعيل المطعم'}>
-                        <input
-                          type="checkbox"
+                        <input 
+                          type="checkbox" 
                           checked={r.status === 'active'}
                           onChange={() => handleToggleStatus(r.id, r.status)}
+                          disabled={!canUpdate}
                         />
                         <span className="toggle-slider"></span>
                       </label>
@@ -396,22 +431,26 @@ export default function RestaurantsPage() {
                   <td>{new Date(r.createdAt).toLocaleDateString('ar-IQ')}</td>
                   <td onClick={e => e.stopPropagation()}>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button
-                        className="btn btn-sm"
-                        onClick={(e) => { e.stopPropagation(); handleEditClick(r); }}
-                        style={{ fontSize: 11, padding: '4px 10px', backgroundColor: 'var(--primary-bg)', color: 'var(--primary)', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                      >
-                        <EditIcon size={12} />
-                        <span>تعديل</span>
-                      </button>
-                      <button
-                        className="btn btn-sm"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(r.id); }}
-                        style={{ fontSize: 11, padding: '4px 10px', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                      >
-                        <TrashIcon size={12} />
-                        <span>حذف</span>
-                      </button>
+                      {canUpdate && (
+                        <button
+                          className="btn btn-sm"
+                          onClick={(e) => { e.stopPropagation(); handleEditClick(r); }}
+                          style={{ fontSize: 11, padding: '4px 10px', backgroundColor: 'var(--primary-bg)', color: 'var(--primary)', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                        >
+                          <EditIcon size={12} />
+                          <span>تعديل</span>
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          className="btn btn-sm"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteClick(r.id); }}
+                          style={{ fontSize: 11, padding: '4px 10px', backgroundColor: '#fef2f2', color: '#ef4444', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                        >
+                          <TrashIcon size={12} />
+                          <span>حذف</span>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -479,6 +518,28 @@ export default function RestaurantsPage() {
                   />
                 </div>
               </div>
+              {/* حقل منطقة المطعم */}
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <MapPinIcon size={15} style={{ color: 'var(--primary)' }} />
+                  منطقة المطعم (لتحديد أسعار التوصيل)
+                </label>
+                <select
+                  className="form-input"
+                  value={formData.restaurantZoneId}
+                  onChange={e => setFormData({ ...formData, restaurantZoneId: e.target.value })}
+                  style={{ padding: '10px 16px', fontFamily: 'Cairo', fontSize: 13, direction: 'rtl', height: 42 }}
+                >
+                  <option value="">-- بدون منطقة (يستخدم الأسعار الافتراضية) --</option>
+                  {originZones.map(z => (
+                    <option key={z.id} value={z.id}>📁 {z.name}</option>
+                  ))}
+                </select>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                  اختر المنطقة التي يقع فيها المطعم لتطبيق أسعار توصيل مخصصة لكل حي
+                </p>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 2fr', gap: 16, marginBottom: 12 }}>
                 <div className="form-group">
                   <label className="form-label">نظام الفوترة</label>
@@ -515,6 +576,7 @@ export default function RestaurantsPage() {
                   />
                 </div>
               </div>
+
               <div className="form-group">
                 <label className="form-label">{editingRestaurant ? 'كلمة المرور الجديدة (اختيارية)' : 'كلمة المرور'}</label>
                 <div style={{ display: 'flex', gap: 8 }}>

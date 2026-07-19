@@ -6,6 +6,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { UuidParam } from '../common/decorators/uuid.decorator';
+import { Permissions } from '../common/decorators/permissions.decorator';
 
 @Controller('orders')
 @UseGuards(RolesGuard)
@@ -66,12 +67,14 @@ export class OrdersController {
   // ─── Admin endpoints ───
   @Get('admin')
   @Roles('admin')
+  @Permissions({ resource: 'orders', action: 'read' })
   getAllOrders() {
     return this.ordersService.getAllOrders();
   }
 
   @Post('admin/assign')
   @Roles('admin')
+  @Permissions({ resource: 'orders', action: 'update' })
   manuallyAssign(
     @CurrentUser() user: any,
     @Body() body: { orderId: string; driverId: string },
@@ -82,6 +85,7 @@ export class OrdersController {
   // ─── Admin: Retry Broadcast ───
   @Post('admin/retry-broadcast')
   @Roles('admin')
+  @Permissions({ resource: 'orders', action: 'update' })
   async retryBroadcast(@Body() body: { orderId: string }) {
     await this.dispatchService.broadcastOrder(body.orderId, 1);
     return { message: 'Broadcast retry triggered', orderId: body.orderId };

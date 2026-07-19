@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3000/api',
+  baseURL: process.env.REACT_APP_API_URL || `${window.location.protocol}//${window.location.hostname}:3000/api`,
 });
 
 api.interceptors.request.use((config) => {
@@ -29,6 +29,18 @@ export default api;
 export const authAPI = {
   login: (phone: string, password: string) =>
     api.post('/auth/login', { phone, password, userType: 'admin' }),
+  updateProfile: (data: { name?: string; phone?: string; password?: string }) =>
+    api.put('/auth/profile', data),
+  getProfile: () =>
+    api.get('/auth/profile'),
+};
+
+// ─── Staff / Dashboard Assistants ───
+export const staffAPI = {
+  getAll: () => api.get('/auth/staff'),
+  create: (data: any) => api.post('/auth/staff', data),
+  update: (id: string, data: any) => api.put(`/auth/staff/${id}`, data),
+  delete: (id: string) => api.delete(`/auth/staff/${id}`),
 };
 
 // ─── Orders ───
@@ -45,6 +57,14 @@ export const zonesAPI = {
   create: (data: any) => api.post('/zones', data),
   update: (id: string, data: any) => api.put(`/zones/${id}`, data),
   delete: (id: string) => api.delete(`/zones/${id}`),
+};
+
+// ─── Restaurant Zones (مناطق المطاعم - مجرد اسم فقط) ───
+export const restaurantZonesAPI = {
+  getAll: () => api.get('/zones/restaurant-zones/all'),
+  create: (name: string) => api.post('/zones/restaurant-zones', { name }),
+  update: (id: string, name: string) => api.put(`/zones/restaurant-zones/${id}`, { name }),
+  delete: (id: string) => api.delete(`/zones/restaurant-zones/${id}`),
 };
 
 // ─── Drivers ───
@@ -74,6 +94,23 @@ export const restaurantsAPI = {
   },
   update: (id: string, data: any) => api.put(`/restaurants/admin/${id}`, data),
   delete: (id: string) => api.delete(`/restaurants/admin/${id}`),
+};
+
+// ─── Restaurant Zone Pricing (أسعار التوصيل الديناميكية) ───
+export const restaurantZonePricingAPI = {
+  /** جلب أسعار التوصيل لمنطقة انطلاق معينة */
+  getByOriginZone: (restaurantZoneId: string) =>
+    api.get(`/restaurants/admin/zone-pricing/${restaurantZoneId}`),
+  /** إنشاء أو تحديث سعر توصيل */
+  upsert: (data: {
+    restaurantZoneId: string;
+    deliveryZoneId: string;
+    deliveryPrice: number;
+    driverDeduction: number;
+  }) => api.post('/restaurants/admin/zone-pricing', data),
+  /** حذف سعر توصيل معين */
+  delete: (restaurantZoneId: string, deliveryZoneId: string) =>
+    api.delete(`/restaurants/admin/zone-pricing/${restaurantZoneId}/${deliveryZoneId}`),
 };
 
 // ─── Wallet ───

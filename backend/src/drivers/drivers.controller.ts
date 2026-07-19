@@ -7,6 +7,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { UuidParam } from '../common/decorators/uuid.decorator';
+import { Permissions } from '../common/decorators/permissions.decorator';
 import * as fs from 'fs';
 
 @Controller('drivers')
@@ -70,24 +71,28 @@ export class DriversController {
 
   @Get('admin')
   @Roles('admin')
+  @Permissions({ resource: 'drivers', action: 'read' })
   findAll() {
     return this.driversService.findAll();
   }
 
   @Get('admin/available')
   @Roles('admin')
+  @Permissions({ resource: 'drivers', action: 'read' })
   findAvailable() {
     return this.driversService.findAvailable();
   }
 
   @Patch('admin/:id/status')
   @Roles('admin')
+  @Permissions({ resource: 'drivers', action: 'update' })
   updateStatus(@UuidParam('id') id: string, @Body() body: { status: string }) {
     return this.driversService.updateStatus(id, body.status);
   }
 
   @Get('admin/:id/details')
   @Roles('admin')
+  @Permissions({ resource: 'drivers', action: 'read' })
   getDriverDetails(@UuidParam('id') id: string) {
     return this.driversService.getDriverDetailsForAdmin(id);
   }

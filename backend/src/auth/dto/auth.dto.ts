@@ -1,4 +1,4 @@
-import { IsString, MinLength, IsNumber } from 'class-validator';
+import { IsString, MinLength, IsNumber, IsOptional, IsObject } from 'class-validator';
 
 export class RegisterRestaurantDto {
   @IsString()
@@ -62,4 +62,54 @@ export class VerifyOtpDto {
 export class RefreshTokenDto {
   @IsString()
   refreshToken: string;
+}
+
+export class UpdateAdminProfileDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @IsString()
+  @IsOptional()
+  @MinLength(6)
+  password?: string;
+}
+
+export class CreateStaffDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  phone: string;
+
+  @IsString()
+  @MinLength(6)
+  password: string;
+
+  @IsObject()
+  @IsOptional()
+  permissions?: any;
+}
+
+export class UpdateStaffDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @IsString()
+  @IsOptional()
+  @MinLength(6)
+  password?: string;
+
+  @IsObject()
+  @IsOptional()
+  permissions?: any;
 }

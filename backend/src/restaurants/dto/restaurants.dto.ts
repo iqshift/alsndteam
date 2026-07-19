@@ -30,6 +30,10 @@ export class CreateRestaurantDto {
   @IsString()
   @IsOptional()
   subscriptionExpiresAt?: string | null;
+
+  @IsString()
+  @IsOptional()
+  restaurantZoneId?: string | null;
 }
 
 export class UpdateRestaurantDto {
@@ -63,4 +67,8 @@ export class UpdateRestaurantDto {
 
   @IsOptional()
   subscriptionExpiresAt?: string | null;
+
+  @IsString()
+  @IsOptional()
+  restaurantZoneId?: string | null;
 }

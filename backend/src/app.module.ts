@@ -16,6 +16,7 @@ import { EmployeesModule } from './employees/employees.module';
 import { SupportModule } from './support/support.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 
 @Module({
   imports: [
@@ -35,7 +36,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     EmployeesModule,
     SupportModule,
   ],
-  providers: [JwtAuthGuard, RolesGuard],
+  providers: [JwtAuthGuard, RolesGuard, PermissionsGuard],
 })
 export class AppModule {}
 

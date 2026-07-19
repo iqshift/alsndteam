@@ -11,6 +11,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { Request } from 'express';
 import { CreateRestaurantDto, UpdateRestaurantDto } from './dto/restaurants.dto';
+import { Permissions } from '../common/decorators/permissions.decorator';
 
 @Controller('restaurants')
 @UseGuards(RolesGuard)
@@ -41,12 +42,54 @@ export class RestaurantsController {
 
   @Get('admin')
   @Roles('admin')
+  @Permissions({ resource: 'restaurants', action: 'read' })
   findAll() {
     return this.restaurantsService.findAll();
   }
 
+  // ═══════════════════════════════════════════════════════
+  //  Zone Pricing Endpoints (أسعار التوصيل الديناميكية)
+  // ═══════════════════════════════════════════════════════
+
+  /** جلب أسعار التوصيل لمنطقة انطلاق محددة */
+  @Get('admin/zone-pricing/:restaurantZoneId')
+  @Roles('admin')
+  @Permissions({ resource: 'restaurants', action: 'read' })
+  getZonePrices(@Param('restaurantZoneId') restaurantZoneId: string) {
+    return this.restaurantsService.getZonePrices(restaurantZoneId);
+  }
+
+  /** إنشاء أو تحديث سعر توصيل لزوج (منطقة المطعم ← حي التوصيل) */
+  @Post('admin/zone-pricing')
+  @Roles('admin')
+  @Permissions({ resource: 'restaurants', action: 'update' })
+  upsertZonePrice(
+    @Body() body: {
+      restaurantZoneId: string;
+      deliveryZoneId: string;
+      deliveryPrice: number;
+      driverDeduction: number;
+    },
+  ) {
+    return this.restaurantsService.upsertZonePrice(body);
+  }
+
+  /** حذف سعر توصيل معين */
+  @Delete('admin/zone-pricing/:restaurantZoneId/:deliveryZoneId')
+  @Roles('admin')
+  @Permissions({ resource: 'restaurants', action: 'update' })
+  deleteZonePrice(
+    @Param('restaurantZoneId') restaurantZoneId: string,
+    @Param('deliveryZoneId') deliveryZoneId: string,
+  ) {
+    return this.restaurantsService.deleteZonePrice(restaurantZoneId, deliveryZoneId);
+  }
+
+  // ═══════════════════════════════════════════════════════
+
   @Post('admin/upload')
   @Roles('admin')
+  @Permissions({ resource: 'restaurants', action: 'create' })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -70,6 +113,7 @@ export class RestaurantsController {
 
   @Post('admin')
   @Roles('admin')
+  @Permissions({ resource: 'restaurants', action: 'create' })
   create(
     @CurrentUser() user: any,
     @Body() body: CreateRestaurantDto,
@@ -82,12 +126,14 @@ export class RestaurantsController {
 
   @Patch('admin/:id/status')
   @Roles('admin')
+  @Permissions({ resource: 'restaurants', action: 'update' })
   updateStatus(@UuidParam('id') id: string, @Body() body: { status: string }) {
     return this.restaurantsService.updateStatus(id, body.status);
   }
 
   @Get('admin/:id/orders')
   @Roles('admin')
+  @Permissions({ resource: 'restaurants', action: 'read' })
   getRestaurantOrders(
     @UuidParam('id') id: string,
     @Query('from') from?: string,
@@ -96,8 +142,16 @@ export class RestaurantsController {
     return this.restaurantsService.getRestaurantOrdersForAdmin(id, from, to);
   }
 
+  @Get('admin/:id')
+  @Roles('admin')
+  @Permissions({ resource: 'restaurants', action: 'read' })
+  getById(@UuidParam('id') id: string) {
+    return this.restaurantsService.getProfile(id);
+  }
+
   @Put('admin/:id')
   @Roles('admin')
+  @Permissions({ resource: 'restaurants', action: 'update' })
   update(
     @UuidParam('id') id: string,
     @Body() body: UpdateRestaurantDto,
@@ -107,8 +161,8 @@ export class RestaurantsController {
 
   @Delete('admin/:id')
   @Roles('admin')
+  @Permissions({ resource: 'restaurants', action: 'delete' })
   delete(@UuidParam('id') id: string) {
     return this.restaurantsService.deleteRestaurant(id);
   }
 }
-

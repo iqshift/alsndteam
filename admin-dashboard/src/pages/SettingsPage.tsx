@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { settingsAPI } from '../services/api';
 import { SettingsIcon, KeyIcon, FileTextIcon, EditIcon, EyeIcon, ScaleIcon } from '../components/common/Icons';
+import { useAuth } from '../hooks/useAuth';
 
 
 interface Settings {
@@ -97,6 +98,9 @@ const FormattingToolbar = ({ field, onFormat }: { field: 'privacyPolicy' | 'term
 );
 
 export default function SettingsPage() {
+  const { user } = useAuth();
+  const canUpdate = user?.role === 'admin' || user?.permissions?.settings?.update === true;
+
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -725,16 +729,22 @@ export default function SettingsPage() {
       )}
 
       {/* Save Button */}
-      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-start', gap: 12 }}>
-        <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{ minWidth: 160, justifyContent: 'center' }}>
-          {saving ? 'جاري الحفظ...' : '💾 حفظ الإعدادات'}
-        </button>
-        {saved && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#059669', fontWeight: 600, fontSize: 14 }}>
-            ✅ تم الحفظ بنجاح
-          </span>
-        )}
-      </div>
+      {canUpdate ? (
+        <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-start', gap: 12 }}>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving} style={{ minWidth: 160, justifyContent: 'center' }}>
+            {saving ? 'جاري الحفظ...' : '💾 حفظ الإعدادات'}
+          </button>
+          {saved && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#059669', fontWeight: 600, fontSize: 14 }}>
+              ✅ تم الحفظ بنجاح
+            </span>
+          )}
+        </div>
+      ) : (
+        <div style={{ marginTop: 24, color: '#e11d48', fontWeight: 700, fontSize: 13.5 }}>
+          ⚠️ وضع العرض فقط: لا تملك صلاحية لتعديل أو حفظ الإعدادات.
+        </div>
+      )}
     </div>
   );
 }

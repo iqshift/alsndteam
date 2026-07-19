@@ -10,6 +10,8 @@ import 'package:restaurant_app/features/home/screens/order_history_screen.dart';
 import 'package:restaurant_app/features/home/screens/delivery_prices_screen.dart';
 
 
+import 'package:restaurant_app/features/auth/screens/login_screen.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -41,7 +43,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthUnauthenticated) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         leadingWidth: 0,
         leading: const SizedBox.shrink(),
@@ -182,8 +194,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHomeTab() {
     return BlocBuilder<OrderBloc, OrderState>(

@@ -31,7 +31,7 @@ export class OrdersService {
       where: { id: 'default' },
     });
     const settings = (adminSettings?.settings as any) || {};
-    const driverDeduction = settings.driverDeduction ?? 500;
+    const defaultDriverDeduction = settings.driverDeduction ?? 500;
 
     let restaurantCommission = settings.restaurantCommission ?? 500;
     if (restaurant.billingMode === 'subscription') {
@@ -62,6 +62,26 @@ export class OrdersService {
       }
     }
 
+    // ── جلب سعر التوصيل: الديناميكي أولاً ← الافتراضي كـ Fallback ──
+    let finalDeliveryPrice: any = zone.deliveryPrice;         // Fallback: السعر الافتراضي من جدول zones
+    let finalDriverDeduction: any = defaultDriverDeduction;   // Fallback: من إعدادات الأدمن
+
+    if (restaurant.restaurantZoneId) {
+      // محاولة جلب السعر الديناميكي من جدول restaurant_zone_prices
+      const dynamicPrice = await this.prisma.restaurantZonePrice.findUnique({
+        where: {
+          restaurantZoneId_deliveryZoneId: {
+            restaurantZoneId: restaurant.restaurantZoneId,
+            deliveryZoneId: dto.zoneId,
+          },
+        },
+      });
+      if (dynamicPrice) {
+        finalDeliveryPrice = dynamicPrice.deliveryPrice;
+        finalDriverDeduction = dynamicPrice.driverDeduction;
+      }
+    }
+
     const order = await this.prisma.order.create({
       data: {
         orderNumber,
@@ -71,8 +91,8 @@ export class OrdersService {
         nearestLandmark: dto.nearestLandmark,
         orderValue: dto.orderValue,
         zoneId: dto.zoneId,
-        deliveryPrice: zone.deliveryPrice,
-        driverDeduction: driverDeduction,
+        deliveryPrice: finalDeliveryPrice,
+        driverDeduction: finalDriverDeduction,
         restaurantCommission: restaurantCommission,
         status: 'searching_driver',
       },

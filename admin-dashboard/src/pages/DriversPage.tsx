@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { driversAPI, walletAPI } from '../services/api';
 import { TruckIcon, CheckCircleIcon, RadioIcon, ActivityIcon, WalletIcon, UserIcon } from '../components/common/Icons';
 import { useSearch } from '../hooks/useSearch';
+import { useAuth } from '../hooks/useAuth';
 import io from 'socket.io-client';
 
 const GiftIcon = () => (
@@ -14,10 +15,13 @@ const GiftIcon = () => (
   </svg>
 );
 
-const socket = io('http://localhost:3000');
+const socket = io(`${window.location.protocol}//${window.location.hostname}:3000`);
 
 export default function DriversPage() {
   const { searchQuery } = useSearch();
+  const { user } = useAuth();
+  const canUpdate = user?.role === 'admin' || user?.permissions?.drivers?.update === true;
+
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDriver, setSelectedDriver] = useState<any | null>(null);
@@ -163,20 +167,22 @@ export default function DriversPage() {
             </span>
           </div>
           
-          <div>
-            <button
-              type="button"
-              className={`btn btn-sm ${driver.status === 'active' ? 'btn-danger' : 'btn-success'}`}
-              onClick={async () => {
-                const newStatus = driver.status === 'active' ? 'suspended' : 'active';
-                await driversAPI.updateStatus(driver.id, newStatus);
-                loadDriverDetails(driver.id);
-                loadDrivers();
-              }}
-            >
-              {driver.status === 'active' ? 'تعليق الحساب' : 'تفعيل الحساب'}
-            </button>
-          </div>
+          {canUpdate && (
+            <div>
+              <button
+                type="button"
+                className={`btn btn-sm ${driver.status === 'active' ? 'btn-danger' : 'btn-success'}`}
+                onClick={async () => {
+                  const newStatus = driver.status === 'active' ? 'suspended' : 'active';
+                  await driversAPI.updateStatus(driver.id, newStatus);
+                  loadDriverDetails(driver.id);
+                  loadDrivers();
+                }}
+              >
+                {driver.status === 'active' ? 'تعليق الحساب' : 'تفعيل الحساب'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Stats Row */}
@@ -564,15 +570,17 @@ export default function DriversPage() {
                     </span>
                   </td>
                   <td>
-                    <button
-                      className={`btn btn-sm ${driver.status === 'active' ? 'btn-warning' : 'btn-success'}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleStatus(driver.id, driver.status);
-                      }}
-                    >
-                      {driver.status === 'active' ? 'إيقاف' : 'تفعيل'}
-                    </button>
+                    {canUpdate && (
+                      <button
+                        className={`btn btn-sm ${driver.status === 'active' ? 'btn-warning' : 'btn-success'}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleStatus(driver.id, driver.status);
+                        }}
+                      >
+                        {driver.status === 'active' ? 'إيقاف' : 'تفعيل'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

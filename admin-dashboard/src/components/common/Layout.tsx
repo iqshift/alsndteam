@@ -23,18 +23,19 @@ import {
 } from './Icons';
 
 const navItems = [
-  { path: '/', label: 'الطلبات', icon: PackageIcon },
-  { path: '/drivers', label: 'السائقون', icon: TruckIcon },
-  { path: '/tracking', label: 'تتبع السائقين', icon: MapPinIcon },
-  { path: '/zones', label: 'المناطق', icon: MapIcon },
-  { path: '/restaurants', label: 'المطاعم', icon: StoreIcon },
-  { path: '/subscriptions', label: 'الاشتراكات', icon: CalendarIcon },
-  { path: '/wallet', label: 'المحفظة', icon: WalletIcon },
-  { path: '/employees', label: 'الموظفون', icon: UsersIcon },
-  { path: '/support', label: 'الدعم', icon: MessageIcon },
-  { path: '/reports', label: 'التقارير', icon: ChartIcon },
-  { path: '/audit', label: 'سجل التدقيق', icon: ClipboardIcon },
-  { path: '/settings', label: 'الإعدادات', icon: SettingsIcon },
+  { path: '/', label: 'الطلبات', icon: PackageIcon, resource: 'orders' },
+  { path: '/drivers', label: 'السائقون', icon: TruckIcon, resource: 'drivers' },
+  { path: '/tracking', label: 'تتبع السائقين', icon: MapPinIcon, resource: 'drivers' },
+  { path: '/zones', label: 'المناطق والأحياء', icon: MapIcon, resource: 'zones' },
+  { path: '/restaurants', label: 'المطاعم', icon: StoreIcon, resource: 'restaurants' },
+  { path: '/subscriptions', label: 'الاشتراكات', icon: CalendarIcon, resource: 'subscriptions' },
+  { path: '/wallet', label: 'المحفظة', icon: WalletIcon, resource: 'wallet' },
+  { path: '/employees', label: 'وكلاء الشحن', icon: UsersIcon, resource: 'rechargeAgents' },
+  { path: '/support', label: 'الدعم', icon: MessageIcon, resource: 'support' },
+  { path: '/reports', label: 'التقارير', icon: ChartIcon, resource: 'reports' },
+  { path: '/audit', label: 'سجل التدقيق', icon: ClipboardIcon, resource: 'audit' },
+  { path: '/settings', label: 'الإعدادات', icon: SettingsIcon, resource: 'settings' },
+  { path: '/staff', label: 'الموظفون والمساعدون', icon: UsersIcon, resource: 'staff' },
 ];
 
 // ─── Status maps ───
@@ -246,26 +247,72 @@ export default function Layout() {
         </div>
 
         <nav className="sidebar-nav">
-          {navItems.map((item) => {
-            const isActive = item.path === '/'
-              ? location.pathname === '/'
-              : location.pathname.startsWith(item.path);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`nav-item ${isActive ? 'active' : ''}`}
-                title={collapsed ? item.label : undefined}
-              >
-                <span className="nav-icon"><Icon size={20} /></span>
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
+          {navItems
+            .filter(item => {
+              // Hide staff management from non-master admins
+              if (item.path === '/staff' && user?.role !== 'admin') {
+                return false;
+              }
+              return true;
+            })
+            .map((item) => {
+              const isActive = item.path === '/'
+                ? location.pathname === '/'
+                : location.pathname.startsWith(item.path);
+              const Icon = item.icon;
+              
+              const isLocked = user?.role === 'staff' && item.resource && user?.permissions?.[item.resource]?.read !== true;
+
+              if (isLocked) {
+                return (
+                  <div
+                    key={item.path}
+                    className="nav-item locked"
+                    onClick={() => alert('عذراً، أنت غير مخول بالدخول إلى هذا القسم')}
+                    style={{
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      borderRadius: 12,
+                      margin: '4px 8px',
+                      color: '#94a3b8',
+                      transition: 'all 0.2s',
+                    }}
+                    title={collapsed ? `${item.label} (مغلق)` : undefined}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span className="nav-icon" style={{ display: 'flex', color: '#94a3b8' }}><Icon size={20} /></span>
+                      {!collapsed && <span className="nav-label" style={{ fontWeight: 600, fontSize: 13.5 }}>{item.label}</span>}
+                    </div>
+                    {!collapsed && (
+                      <span style={{ color: '#ef4444', display: 'flex' }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                      </span>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`nav-item ${isActive ? 'active' : ''}`}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <span className="nav-icon"><Icon size={20} /></span>
+                  {!collapsed && <span>{item.label}</span>}
+                </Link>
+              );
+            })}
         </nav>
 
-        <div className="sidebar-user">
+        <Link to="/profile" className="sidebar-user" style={{ textDecoration: 'none', cursor: 'pointer' }}>
           <div className="avatar">{user?.name?.charAt(0) || 'A'}</div>
           {!collapsed && (
             <div className="user-info">
@@ -273,7 +320,7 @@ export default function Layout() {
               <div className="user-phone">{user?.phone}</div>
             </div>
           )}
-        </div>
+        </Link>
 
         <button onClick={logout} className="logout-btn">
           <span className="nav-icon"><LogoutIcon size={20} /></span>
@@ -459,7 +506,7 @@ export default function Layout() {
               <span className="notification-dot"></span>
             </div>
 
-            <div className="header-profile">
+            <Link to="/profile" className="header-profile" style={{ textDecoration: 'none', cursor: 'pointer' }}>
               <div className="profile-info">
                 <span className="profile-name">{user?.name || 'المدير'}</span>
                 <span className="profile-role">مدير النظام</span>
@@ -467,7 +514,7 @@ export default function Layout() {
               <div className="profile-avatar">
                 {user?.name?.charAt(0) || 'A'}
               </div>
-            </div>
+            </Link>
           </div>
         </header>
 

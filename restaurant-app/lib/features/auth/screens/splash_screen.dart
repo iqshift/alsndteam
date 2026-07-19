@@ -12,30 +12,32 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  bool _logoDelayFinished = false;
+  bool _navigated = false;
 
   @override
   void initState() {
     super.initState();
-    // عرض شعار التطبيق لثانيتين كحد أدنى لتوفير تجربة مستخدم سلسة
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _logoDelayFinished = true;
-        });
-        _checkStateAndNavigate(context.read<AuthBloc>().state);
-      }
-    });
+    _startTimer();
   }
 
-  void _checkStateAndNavigate(AuthState state) {
-    if (!_logoDelayFinished) return;
+  void _startTimer() async {
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) {
+      _checkStateAndNavigate(context.read<AuthBloc>().state, forceFallback: true);
+    }
+  }
+
+  void _checkStateAndNavigate(AuthState state, {bool forceFallback = false}) {
+    if (_navigated || !mounted) return;
+
     if (state is AuthAuthenticated) {
+      _navigated = true;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
-    } else if (state is AuthUnauthenticated || state is AuthError) {
+    } else if (state is AuthUnauthenticated || state is AuthError || forceFallback) {
+      _navigated = true;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),

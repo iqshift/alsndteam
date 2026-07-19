@@ -3,6 +3,7 @@ import { SettingsService } from './settings.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Public } from '../common/decorators/public.decorator';
+import { Permissions } from '../common/decorators/permissions.decorator';
 
 @Controller('settings')
 @UseGuards(RolesGuard)
@@ -10,12 +11,14 @@ export class SettingsController {
   constructor(private settingsService: SettingsService) {}
 
   @Roles('admin')
+  @Permissions({ resource: 'settings', action: 'read' })
   @Get()
   getSettings() {
     return this.settingsService.getSettings();
   }
 
   @Roles('admin')
+  @Permissions({ resource: 'settings', action: 'update' })
   @Put()
   updateSettings(@Body() body: any) {
     return this.settingsService.updateSettings(body);

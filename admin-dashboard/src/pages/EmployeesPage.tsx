@@ -31,7 +31,7 @@ export default function EmployeesPage() {
       setShowCreate(false);
       loadEmployees();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'فشل إنشاء الموظف');
+      alert(err.response?.data?.message || 'فشل إنشاء الوكيل');
     } finally {
       setSaving(false);
     }
@@ -57,14 +57,14 @@ export default function EmployeesPage() {
   return (
     <div>
       <div className="page-header">
-        <h1>الموظفون</h1>
-        <button className="btn btn-primary" onClick={() => setShowCreate(true)}>+ إضافة موظف</button>
+        <h1>وكلاء الشحن</h1>
+        <button className="btn btn-primary" onClick={() => setShowCreate(true)}>+ إضافة وكيل شحن</button>
       </div>
 
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon primary"><UsersIcon size={24} /></div>
-          <div className="stat-info"><h3>{stats.total}</h3><p>إجمالي الموظفين</p></div>
+          <div className="stat-info"><h3>{stats.total}</h3><p>إجمالي الوكلاء</p></div>
         </div>
         <div className="stat-card">
           <div className="stat-icon success"><CheckCircleIcon size={24} /></div>
@@ -100,7 +100,7 @@ export default function EmployeesPage() {
               <tr><td colSpan={7}>
                 <div className="empty-state">
                   <div className="empty-state-icon"><UsersIcon size={48} /></div>
-                  <div className="empty-state-text">لا يوجد موظفون بعد</div>
+                  <div className="empty-state-text">لا يوجد وكلاء شحن بعد</div>
                 </div>
               </td></tr>
             ) : (
@@ -146,12 +146,12 @@ export default function EmployeesPage() {
       {showCreate && (
         <div className="modal-overlay" onClick={() => setShowCreate(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: 420 }}>
-            <div className="modal-title">إضافة موظف جديد</div>
-            <div className="modal-subtitle">أدخل بيانات الموظف لإنشاء حسابه على جهاز POS</div>
+            <div className="modal-title">إضافة وكيل شحن جديد</div>
+            <div className="modal-subtitle">أدخل بيانات الوكيل لإنشاء حسابه على جهاز POS</div>
 
             <form onSubmit={handleCreate}>
               <div className="form-group">
-                <label className="form-label">اسم الموظف</label>
+                <label className="form-label">اسم الوكيل</label>
                 <input className="form-input" type="text" placeholder="مثال: أحمد محمد" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required autoFocus />
               </div>
               <div className="form-group">
@@ -164,7 +164,7 @@ export default function EmployeesPage() {
               </div>
               <div className="modal-actions">
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={saving}>
-                  {saving ? 'جاري الإنشاء...' : 'إنشاء الموظف'}
+                  {saving ? 'جاري الإنشاء...' : 'إنشاء حساب الوكيل'}
                 </button>
                 <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowCreate(false)}>إغلاق</button>
               </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ordersAPI, driversAPI } from '../services/api';
 import { PackageIcon, ClockIcon, CheckCircleIcon, XCircleIcon, TruckIcon, CalendarIcon, StoreIcon } from '../components/common/Icons';
 import { useSearch } from '../hooks/useSearch';
+import { useAuth } from '../hooks/useAuth';
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   searching_driver: { label: 'بحث عن سائق', color: '#b45309', bg: 'rgba(245,158,11,0.1)' },
@@ -15,6 +16,9 @@ const statusConfig: Record<string, { label: string; color: string; bg: string }>
 
 export default function OrdersPage() {
   const { searchQuery } = useSearch();
+  const { user } = useAuth();
+  const canUpdate = user?.role === 'admin' || user?.permissions?.orders?.update === true;
+
   const [orders, setOrders] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
@@ -228,9 +232,11 @@ export default function OrdersPage() {
                       <h4>{driver.name}</h4>
                       <p>{driver.phone} — الرصيد: {driver.walletBalance} د.ع</p>
                     </div>
-                    <button className="btn btn-success btn-sm" onClick={() => handleAssign(selectedOrder, driver.id)}>
-                      تعيين
-                    </button>
+                    {canUpdate && (
+                      <button className="btn btn-success btn-sm" onClick={() => handleAssign(selectedOrder, driver.id)}>
+                        تعيين
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

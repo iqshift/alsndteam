@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Put, Request, UnauthorizedException, Get, Delete, Param } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
   RegisterRestaurantDto,
@@ -7,6 +7,9 @@ import {
   SendOtpDto,
   VerifyOtpDto,
   RefreshTokenDto,
+  UpdateAdminProfileDto,
+  CreateStaffDto,
+  UpdateStaffDto,
 } from './dto/auth.dto';
 import { Public } from '../common/decorators/public.decorator';
 
@@ -49,5 +52,53 @@ export class AuthController {
   @Post('refresh')
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refreshToken(dto.refreshToken);
+  }
+
+  @Get('profile')
+  getProfile(@Request() req) {
+    if (!req.user) {
+      throw new UnauthorizedException('يجب تسجيل الدخول');
+    }
+    return req.user;
+  }
+
+  @Put('profile')
+  updateProfile(@Request() req, @Body() dto: UpdateAdminProfileDto) {
+    if (!req.user || req.user.userType !== 'admin') {
+      throw new UnauthorizedException('يجب تسجيل الدخول كمشرف لتعديل الملف الشخصي');
+    }
+    return this.authService.updateAdminProfile(req.user.id, dto);
+  }
+
+  @Get('staff')
+  getAllStaff(@Request() req) {
+    if (!req.user || req.user.userType !== 'admin' || req.user.role !== 'admin') {
+      throw new UnauthorizedException('هذه الصلاحية للمشرف الرئيسي فقط');
+    }
+    return this.authService.getAllStaff();
+  }
+
+  @Post('staff')
+  createStaff(@Request() req, @Body() dto: CreateStaffDto) {
+    if (!req.user || req.user.userType !== 'admin' || req.user.role !== 'admin') {
+      throw new UnauthorizedException('هذه الصلاحية للمشرف الرئيسي فقط');
+    }
+    return this.authService.createStaff(dto);
+  }
+
+  @Put('staff/:id')
+  updateStaff(@Request() req, @Param('id') id: string, @Body() dto: UpdateStaffDto) {
+    if (!req.user || req.user.userType !== 'admin' || req.user.role !== 'admin') {
+      throw new UnauthorizedException('هذه الصلاحية للمشرف الرئيسي فقط');
+    }
+    return this.authService.updateStaff(id, dto);
+  }
+
+  @Delete('staff/:id')
+  deleteStaff(@Request() req, @Param('id') id: string) {
+    if (!req.user || req.user.userType !== 'admin' || req.user.role !== 'admin') {
+      throw new UnauthorizedException('هذه الصلاحية للمشرف الرئيسي فقط');
+    }
+    return this.authService.deleteStaff(id);
   }
 }

@@ -7,9 +7,9 @@ import { EventsGateway } from '../events/events.gateway';
 @Injectable()
 export class DispatchService implements OnModuleInit {
   private readonly logger = new Logger(DispatchService.name);
-  private queue: Queue;
-  private worker: Worker;
-  readonly redis: any;
+  private queue: Queue | null = null;
+  private worker: Worker | null = null;
+  private isRedisAvailable = false;
 
   // Configurable broadcast settings
   private readonly broadcastDelayMs: number;
@@ -22,35 +22,50 @@ export class DispatchService implements OnModuleInit {
     private config: ConfigService,
   ) {
     this.redisUrl = this.config.get('REDIS_URL', 'redis://localhost:6379');
-    this.broadcastDelayMs = this.config.get('BROADCAST_DELAY_MS', 3000); // 3 ثوانٍ بدلاً من 30 ثانية للتسريع التجريبي
+    this.broadcastDelayMs = this.config.get('BROADCAST_DELAY_MS', 3000);
     this.maxTiers = this.config.get('MAX_TIERS', 5);
   }
 
   onModuleInit() {
-    const connection = { connection: { url: this.redisUrl } };
+    try {
+      const connection = { connection: { url: this.redisUrl, maxRetriesPerRequest: 1 } };
 
-    this.queue = new Queue('order-broadcast', {
-      ...connection,
-      defaultJobOptions: {
-        removeOnComplete: true,
-        removeOnFail: true,
-      },
-    });
-
-    this.worker = new Worker(
-      'order-broadcast',
-      async (job: Job) => {
-        await this.handleBroadcastJob(job.data.orderId, job.data.tier);
-      },
-      {
+      this.queue = new Queue('order-broadcast', {
         ...connection,
-        concurrency: 10,
-      },
-    );
+        defaultJobOptions: {
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      });
 
-    this.worker.on('failed', (job, err) => {
-      this.logger.error(`Broadcast job ${job?.id} failed: ${err.message}`);
-    });
+      this.worker = new Worker(
+        'order-broadcast',
+        async (job: Job) => {
+          await this.handleBroadcastJob(job.data.orderId, job.data.tier);
+        },
+        {
+          ...connection,
+          concurrency: 10,
+        },
+      );
+
+      this.worker.on('failed', (job, err) => {
+        this.logger.error(`Broadcast job ${job?.id} failed: ${err.message}`);
+      });
+
+      this.worker.on('error', (err) => {
+        // Silently log or handle redis disconnect
+        this.isRedisAvailable = false;
+      });
+
+      this.isRedisAvailable = true;
+      this.logger.log('DispatchService initialized with BullMQ Redis connection.');
+    } catch (err: any) {
+      this.logger.warn(`Redis is not available (${err.message}). Falling back to in-memory dispatch timers.`);
+      this.isRedisAvailable = false;
+      this.queue = null;
+      this.worker = null;
+    }
   }
 
   // ─── Broadcast to Nearby Drivers ───
@@ -179,37 +194,49 @@ export class DispatchService implements OnModuleInit {
   // ─── Calculate Distance (Haversine formula) ───
   private calculateDistance(
     lat1: number,
-    lng1: number,
+    lon1: number,
     lat2: number,
-    lng2: number,
+    lon2: number,
   ): number {
-    const R = 6371; // Earth radius in km
-    const dLat = this.toRad(lat2 - lat1);
-    const dLng = this.toRad(lng2 - lng1);
+    const R = 6371; // Radius of the earth in km
+    const dLat = this.deg2rad(lat2 - lat1);
+    const dLon = this.deg2rad(lon2 - lon1);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRad(lat1)) *
-        Math.cos(this.toRad(lat2)) *
-        Math.sin(dLng / 2) *
-        Math.sin(dLng / 2);
+      Math.cos(this.deg2rad(lat1)) *
+        Math.cos(this.deg2rad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    return R * c; // Distance in km
   }
 
-  private toRad(deg: number): number {
+  private deg2rad(deg: number): number {
     return deg * (Math.PI / 180);
   }
 
   // ─── Schedule Delayed Broadcast ───
   private async scheduleBroadcast(orderId: string, nextTier: number) {
-    await this.queue.add(
-      'next-tier',
-      { orderId, tier: nextTier },
-      {
-        delay: this.broadcastDelayMs,
-        jobId: `broadcast_${orderId}_tier_${nextTier}`,
-      },
-    );
+    if (this.queue && this.isRedisAvailable) {
+      try {
+        await this.queue.add(
+          'next-tier',
+          { orderId, tier: nextTier },
+          {
+            delay: this.broadcastDelayMs,
+            jobId: `broadcast_${orderId}_tier_${nextTier}`,
+          },
+        );
+        return;
+      } catch (_) {
+        this.isRedisAvailable = false;
+      }
+    }
+
+    // Fallback to in-memory setTimeout if Redis is unavailable
+    setTimeout(() => {
+      this.handleBroadcastJob(orderId, nextTier);
+    }, this.broadcastDelayMs);
   }
 
   // ─── Handle Broadcast Job ───
@@ -229,14 +256,17 @@ export class DispatchService implements OnModuleInit {
     await this.broadcastOrder(orderId, nextTier);
   }
 
-
   // ─── Cancel Broadcast Job ───
   async cancelBroadcastJob(orderId: string) {
-    const jobs = await this.queue.getJobs(['waiting', 'delayed']);
-    for (const job of jobs) {
-      if (job.data.orderId === orderId) {
-        await job.remove();
-      }
+    if (this.queue && this.isRedisAvailable) {
+      try {
+        const jobs = await this.queue.getJobs(['waiting', 'delayed']);
+        for (const job of jobs) {
+          if (job.data.orderId === orderId) {
+            await job.remove();
+          }
+        }
+      } catch (_) {}
     }
   }
 }

@@ -22,6 +22,9 @@ import SettingsPage from './pages/SettingsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsOfUsePage from './pages/TermsOfUsePage';
 import DeleteAccountPage from './pages/DeleteAccountPage';
+import ProfilePage from './pages/ProfilePage';
+import StaffPage from './pages/StaffPage';
+import RestaurantZonePricingPage from './pages/RestaurantZonePricingPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -57,6 +60,9 @@ function App() {
               <Route path="reports" element={<ReportsPage />} />
               <Route path="audit" element={<AuditLogPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="profile" element={<ProfilePage />} />
+              <Route path="staff" element={<StaffPage />} />
+              <Route path="zone-pricing" element={<RestaurantZonePricingPage />} />
             </Route>
             <Route path="/tracking-fullscreen" element={<ProtectedRoute><TrackingPage fullscreen={true} /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/home" />} />
