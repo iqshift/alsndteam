@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+export const BACKEND_BASE_URL = isLocal
+  ? `http://${window.location.hostname}:3000`
+  : `${window.location.protocol}//${window.location.hostname}`;
+
+export const API_BASE_URL = `${BACKEND_BASE_URL}/api`;
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || `${window.location.protocol}//${window.location.hostname}:3000/api`,
+  baseURL: process.env.REACT_APP_API_URL || API_BASE_URL,
 });
 
 api.interceptors.request.use((config) => {

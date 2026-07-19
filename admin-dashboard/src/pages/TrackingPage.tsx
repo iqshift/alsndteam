@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import io from 'socket.io-client';
+import { BACKEND_BASE_URL } from '../services/api';
 
 // Fix Leaflet default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -11,7 +12,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
-const socket = io(`${window.location.protocol}//${window.location.hostname}:3000`);
+const socket = io(BACKEND_BASE_URL);
 
 interface DriverLocation {
   id: string;
@@ -146,7 +147,7 @@ export default function TrackingPage({ fullscreen = false }: { fullscreen?: bool
 
   const loadDrivers = async () => {
     try {
-      const res = await fetch(`${window.location.protocol}//${window.location.hostname}:3000/api/drivers/admin`, {
+      const res = await fetch(`${BACKEND_BASE_URL}/api/drivers/admin`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('admin_token')}` },
       });
       const allDrivers = await res.json();

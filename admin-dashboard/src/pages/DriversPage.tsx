@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { driversAPI, walletAPI } from '../services/api';
+import { driversAPI, walletAPI, BACKEND_BASE_URL } from '../services/api';
 import { TruckIcon, CheckCircleIcon, RadioIcon, ActivityIcon, WalletIcon, UserIcon } from '../components/common/Icons';
 import { useSearch } from '../hooks/useSearch';
 import { useAuth } from '../hooks/useAuth';
@@ -15,7 +15,7 @@ const GiftIcon = () => (
   </svg>
 );
 
-const socket = io(`${window.location.protocol}//${window.location.hostname}:3000`);
+const socket = io(BACKEND_BASE_URL);
 
 export default function DriversPage() {
   const { searchQuery } = useSearch();

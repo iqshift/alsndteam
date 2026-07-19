@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supportAPI } from '../services/api';
+import { supportAPI, BACKEND_BASE_URL } from '../services/api';
 import io from 'socket.io-client';
 import { LockIcon, WhatsAppIcon, MessageIcon, PackageIcon, PhoneIcon, CameraIcon, UserIcon } from '../components/common/Icons';
 
-const socket = io(`${window.location.protocol}//${window.location.hostname}:3000`);
+const socket = io(BACKEND_BASE_URL);
 
 export default function SupportPage() {
   const [chats, setChats] = useState<any[]>([]);
@@ -363,7 +363,7 @@ export default function SupportPage() {
                   {/* Photo / Avatar */}
                   {chat.driver.photo ? (
                     <img
-                      src={`${window.location.protocol}//${window.location.hostname}:3000${chat.driver.photo}`}
+                      src={`${BACKEND_BASE_URL}${chat.driver.photo}`}
                       alt={chat.driver.name}
                       style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }}
                     />
@@ -444,7 +444,7 @@ export default function SupportPage() {
                 <div style={{ position: 'relative' }}>
                   {selectedChat.driver.photo ? (
                     <img
-                      src={`${window.location.protocol}//${window.location.hostname}:3000${selectedChat.driver.photo}`}
+                      src={`${BACKEND_BASE_URL}${selectedChat.driver.photo}`}
                       alt={selectedChat.driver.name}
                       style={{ width: 42, height: 42, borderRadius: '50%', objectFit: 'cover' }}
                     />
@@ -607,7 +607,7 @@ export default function SupportPage() {
                       {isImg ? (
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                           <img
-                            src={`${window.location.protocol}//${window.location.hostname}:3000${msg.content}`}
+                            src={`${BACKEND_BASE_URL}${msg.content}`}
                             alt="support attachment"
                             style={{
                               maxWidth: '100%',
@@ -616,7 +616,7 @@ export default function SupportPage() {
                               cursor: 'pointer',
                               border: '1px solid rgba(0,0,0,0.06)'
                             }}
-                            onClick={() => window.open(`${window.location.protocol}//${window.location.hostname}:3000${msg.content}`, '_blank')}
+                            onClick={() => window.open(`${BACKEND_BASE_URL}${msg.content}`, '_blank')}
                           />
                         </div>
                       ) : (

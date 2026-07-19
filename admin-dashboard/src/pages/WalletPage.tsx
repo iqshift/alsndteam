@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { walletAPI } from '../services/api';
+import { walletAPI, BACKEND_BASE_URL } from '../services/api';
 import { TicketIcon, CheckCircleIcon, XCircleIcon, WalletIcon, UserIcon } from '../components/common/Icons';
 
 export default function WalletPage() {
@@ -213,7 +213,7 @@ export default function WalletPage() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24, padding: '16px 0', borderBottom: '1px solid var(--border)' }}>
               {selectedDriver.photo ? (
                 <img
-                  src={`${window.location.protocol}//${window.location.hostname}:3000${selectedDriver.photo}`}
+                  src={`${BACKEND_BASE_URL}${selectedDriver.photo}`}
                   alt={selectedDriver.name}
                   style={{ width: 70, height: 70, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', marginBottom: 12 }}
                 />
