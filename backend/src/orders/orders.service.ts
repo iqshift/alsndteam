@@ -168,6 +168,38 @@ export class OrdersService {
     });
   }
 
+  // ─── Driver: Get My Active Broadcasts ───
+  async getDriverBroadcasts(driverId: string) {
+    const broadcasts = await this.prisma.orderBroadcast.findMany({
+      where: {
+        driverId,
+        response: null,
+        order: {
+          status: 'searching_driver',
+        },
+      },
+      include: {
+        order: {
+          include: {
+            restaurant: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    return broadcasts.map((b) => ({
+      orderId: b.orderId,
+      restaurantName: b.order.restaurant.name,
+      deliveryPrice: Number(b.order.deliveryPrice),
+      driverDeduction: Number(b.order.driverDeduction),
+      restaurantCommission: Number(b.order.restaurantCommission),
+      orderValue: Number(b.order.orderValue),
+      customerAddress: b.order.customerAddress,
+      tier: b.tier,
+      decisionDuration: 30,
+    }));
+  }
+
   // ─── Driver: Accept Order ───
   async acceptOrder(driverId: string, orderId: string) {
     // Simple in-memory lock to prevent race conditions

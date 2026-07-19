@@ -150,6 +150,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     emit(OrderLoading());
     try {
       final orders = await _apiService.getMyOrders();
+      final pendingBroadcasts = await _apiService.getPendingBroadcasts();
       final activeOrder = orders.firstWhere(
         (o) => !['delivered', 'cancelled'].contains(o['status']),
         orElse: () => null,
@@ -157,6 +158,14 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
       // ← تطبيق أي طلب معلق وصل أثناء التحميل
       final pending = List<Map<String, dynamic>>.from(_pendingBroadcastBuffer);
       _pendingBroadcastBuffer.clear();
+
+      for (var pb in pendingBroadcasts) {
+        final exists = pending.any((o) => o['orderId'] == pb['orderId']);
+        if (!exists) {
+          pending.add(Map<String, dynamic>.from(pb));
+        }
+      }
+
       emit(OrderActive(
         activeOrder: activeOrder,
         orderHistory: orders

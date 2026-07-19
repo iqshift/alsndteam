@@ -41,12 +41,47 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // ─── Join Driver Room (for receiving new orders) ───
   @SubscribeMessage('join_driver')
-  handleJoinDriver(
+  async handleJoinDriver(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { driverId: string },
   ) {
     client.join(`driver:${data.driverId}`);
     this.logger.log(`Client ${client.id} joined driver:${data.driverId}`);
+
+    try {
+      const activeBroadcasts = await this.prisma.orderBroadcast.findMany({
+        where: {
+          driverId: data.driverId,
+          response: null,
+          order: {
+            status: 'searching_driver',
+          },
+        },
+        include: {
+          order: {
+            include: {
+              restaurant: { select: { name: true } },
+            },
+          },
+        },
+      });
+
+      for (const b of activeBroadcasts) {
+        client.emit('new_order', {
+          orderId: b.orderId,
+          restaurantName: b.order.restaurant.name,
+          deliveryPrice: Number(b.order.deliveryPrice),
+          driverDeduction: Number(b.order.driverDeduction),
+          restaurantCommission: Number(b.order.restaurantCommission),
+          orderValue: Number(b.order.orderValue),
+          customerAddress: b.order.customerAddress,
+          tier: b.tier,
+          decisionDuration: 30,
+        });
+      }
+    } catch (err: any) {
+      this.logger.error(`Failed to send active broadcasts to reconnected driver ${data.driverId}: ${err.message}`);
+    }
   }
 
   // ─── Driver Location Update ───

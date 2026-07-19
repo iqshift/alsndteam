@@ -42,6 +42,12 @@ export class OrdersController {
     return this.ordersService.getDriverOrders(user.id);
   }
 
+  @Get('driver/broadcasts')
+  @Roles('driver')
+  getDriverBroadcasts(@CurrentUser() user: any) {
+    return this.ordersService.getDriverBroadcasts(user.id);
+  }
+
   @Post('driver/accept')
   @Roles('driver')
   acceptOrder(@CurrentUser() user: any, @Body() dto: BroadcastResponseDto) {

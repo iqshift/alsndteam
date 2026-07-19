@@ -151,6 +151,11 @@ class ApiService {
     return response.data;
   }
 
+  Future<List<dynamic>> getPendingBroadcasts() async {
+    final response = await _dio.get('/orders/driver/broadcasts');
+    return response.data;
+  }
+
   Future<Map<String, dynamic>> acceptOrder(String orderId) async {
     final response = await _dio.post('/orders/driver/accept', data: {
       'orderId': orderId,
