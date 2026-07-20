@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
+import io from 'socket.io-client';
 import { useAuth } from '../../hooks/useAuth';
 import { useSearch } from '../../hooks/useSearch';
-import { settingsAPI, ordersAPI, driversAPI, restaurantsAPI } from '../../services/api';
+import { settingsAPI, ordersAPI, driversAPI, restaurantsAPI, supportAPI, BACKEND_BASE_URL } from '../../services/api';
 import {
   PackageIcon,
   TruckIcon,
@@ -10,6 +11,7 @@ import {
   MapIcon,
   StoreIcon,
   WalletIcon,
+  DollarSignIcon,
   ChartIcon,
   ClipboardIcon,
   SettingsIcon,
@@ -28,6 +30,7 @@ const navItems = [
   { path: '/tracking', label: 'تتبع السائقين', icon: MapPinIcon, resource: 'drivers' },
   { path: '/zones', label: 'المناطق والأحياء', icon: MapIcon, resource: 'zones' },
   { path: '/restaurants', label: 'المطاعم', icon: StoreIcon, resource: 'restaurants' },
+  { path: '/platform-revenue', label: 'أرباح المنصة', icon: DollarSignIcon, resource: 'reports' },
   { path: '/subscriptions', label: 'الاشتراكات', icon: CalendarIcon, resource: 'subscriptions' },
   { path: '/wallet', label: 'المحفظة', icon: WalletIcon, resource: 'wallet' },
   { path: '/employees', label: 'وكلاء الشحن', icon: UsersIcon, resource: 'rechargeAgents' },
@@ -70,6 +73,43 @@ export default function Layout() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const [unreadSupportCount, setUnreadSupportCount] = useState<number>(0);
+
+  // ─── Unread Support Messages Sync ───
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const { data } = await supportAPI.getChats();
+      if (Array.isArray(data)) {
+        const total = data.reduce((sum: number, chat: any) => sum + (chat.unreadCount || 0), 0);
+        setUnreadSupportCount(total);
+      }
+    } catch (e) {
+      // silent catch
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const socket = io(BACKEND_BASE_URL);
+
+    socket.on('new_support_message', () => {
+      fetchUnreadCount();
+    });
+    socket.on('support_chat_read', () => {
+      fetchUnreadCount();
+    });
+    socket.on('support_chat_cleared', () => {
+      fetchUnreadCount();
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [fetchUnreadCount]);
+
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [location.pathname, fetchUnreadCount]);
 
   // ─── Global search state ───
   const [searchFocused, setSearchFocused] = useState(false);
@@ -501,9 +541,39 @@ export default function Layout() {
               )}
             </div>
 
-            <div className="chat-notification" title="الرسائل والتنبيهات">
+            <div
+              className="chat-notification"
+              onClick={() => navigate('/support')}
+              title="الدعم الفني والمحادثات"
+              style={{ cursor: 'pointer', position: 'relative' }}
+            >
               <span><MessageIcon size={20} /></span>
-              <span className="notification-dot"></span>
+              {unreadSupportCount > 0 ? (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: -4,
+                    right: -4,
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: 10,
+                    fontWeight: 800,
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 4px',
+                    boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
+                    lineHeight: 1,
+                  }}
+                >
+                  {unreadSupportCount > 99 ? '99+' : unreadSupportCount}
+                </span>
+              ) : (
+                <span className="notification-dot"></span>
+              )}
             </div>
 
             <Link to="/profile" className="header-profile" style={{ textDecoration: 'none', cursor: 'pointer' }}>

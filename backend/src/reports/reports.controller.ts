@@ -32,4 +32,12 @@ export class ReportsController {
   ) {
     return this.reportsService.getZonesReport(from, to);
   }
+
+  @Get('platform-revenue')
+  getPlatformRevenue(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.reportsService.getPlatformRevenue(from, to);
+  }
 }

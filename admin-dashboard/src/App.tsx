@@ -25,6 +25,7 @@ import DeleteAccountPage from './pages/DeleteAccountPage';
 import ProfilePage from './pages/ProfilePage';
 import StaffPage from './pages/StaffPage';
 import RestaurantZonePricingPage from './pages/RestaurantZonePricingPage';
+import PlatformRevenuePage from './pages/PlatformRevenuePage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -58,6 +59,7 @@ function App() {
               <Route path="employees/:id" element={<EmployeeDetailPage />} />
               <Route path="support" element={<SupportPage />} />
               <Route path="reports" element={<ReportsPage />} />
+              <Route path="platform-revenue" element={<PlatformRevenuePage />} />
               <Route path="audit" element={<AuditLogPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="profile" element={<ProfilePage />} />

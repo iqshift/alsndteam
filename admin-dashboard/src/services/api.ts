@@ -139,6 +139,8 @@ export const reportsAPI = {
     api.get('/reports/drivers', { params }),
   getZones: (params: { from: string; to: string }) =>
     api.get('/reports/zones', { params }),
+  getPlatformRevenue: (params?: { from?: string; to?: string }) =>
+    api.get('/reports/platform-revenue', { params }),
 };
 
 // ─── Audit ───
