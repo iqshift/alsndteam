@@ -65,7 +65,7 @@ export default function PlatformRevenuePage() {
   const [orderLogs, setOrderLogs] = useState<OrderLog[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [dateRange, setDateRange] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
+  const [dateRange, setDateRange] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('today');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
